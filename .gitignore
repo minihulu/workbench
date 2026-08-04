@@ -1,0 +1,43 @@
+# 密钥文件 —— 绝不能提交
+wb.env
+*.env
+!wb.env.example
+# wrangler pages dev 的本地环境变量（含密钥）；注意 *.env 匹配不到它
+.dev.vars
+.dev.vars.*
+
+# 数据与备份
+*.db
+backups/
+data/
+
+# 构建产物
+build*/
+dist*/
+*.spec
+__pycache__/
+*.pyc
+.venv/
+venv/
+node_modules/
+src-tauri/target/
+
+# 临时
+_t/
+_diag.txt
+*.log
+.to-delete_*
+# 一次性探针脚本（连真实 Supabase 做隔离实验，本地用，不入库）
+.probe_*.py
+
+# 助手的本地工作记忆 —— 纯本地笔记，且含 Supabase 项目地址等内部信息，不入库
+.workbuddy/
+
+# Cloudflare Pages 构建产物（由 workbench.html 生成，不提交）
+_site/
+# 根目录的 index.html 是 workbench.html 的副本，属于构建产物。
+# 历史上「仓库里同时躺着两份、改了一份另一份没变」导致过严重的
+# 「改了代码却没生效」事故，这里从源头杜绝：唯一真相是 workbench.html。
+/index.html
+.wrangler/
+.npmtmp/

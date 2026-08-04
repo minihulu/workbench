@@ -1,0 +1,24 @@
+# 同步层端点放这里（由同步层负责人实现）：
+#   pull.ts    → GET  /api/sync/pull     导出 onRequestGet
+#   push.ts    → POST /api/sync/push     导出 onRequestPost
+#   stream.ts  → GET  /api/sync/stream   导出 onRequestGet（SSE）
+#
+# 可直接复用的共享模块（相对路径 ../../../lib/xxx.ts）：
+#   lib/auth.ts      requireUser(request, env) -> Promise<{uid, username}>，失败抛 HttpError(401,'未登录')
+#   lib/supabase.ts  postgrest(env, path, init) 通用 PostgREST 调用（service_role，绕过 RLS）
+#                    emptyPayload() / RECORD_KEYS / SyncRow 类型
+#                    eqFilter(col, val) 生成 `col=eq.<percent-encoded>` 过滤串
+#                    ⚠️ 千万别给 eq. 的值加双引号：PostgREST 不剥引号，
+#                       uuid 列会报 22P02，text 列则静默查不到人。
+#   lib/json.ts      jsonResponse / errorResponse / guard / readBody / HttpError
+#   lib/merge.ts     mergeRecords / mergePayload —— 空壳，需要你来实现
+#
+# CAS（乐观锁）写法示例：
+#   const res = await postgrest(env,
+#     `/sync?${eqFilter('uid', uid)}&payload_version=eq.${ver}&select=uid`,
+#     { method: 'PATCH', headers: { Prefer: 'return=representation' },
+#       body: JSON.stringify({ payload, payload_version: ver + 1, updated_at: now }) });
+#   const rows = await res.json();          // 空数组 = CAS 冲突，重试
+#
+# 注意：/api/api/sync/stream 的 SSE 在 Worker 上没有跨请求的进程内 subscribers 字典，
+#      需要另想办法（Supabase Realtime / 轮询降级），请自行评估。

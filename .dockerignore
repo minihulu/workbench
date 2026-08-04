@@ -1,0 +1,20 @@
+# 不进镜像的文件
+.git
+.gitignore
+__pycache__
+*.pyc
+*.pyo
+.venv
+venv
+node_modules
+src-tauri
+*.db
+backups
+data
+# 含 QQ/微信/GitHub 密钥，绝不能进镜像
+wb.env
+*.env
+README*.md
+*.bat
+build
+dist

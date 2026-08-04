@@ -1,0 +1,18 @@
+# Cloudflare Pages 配置（Pages 专用字段集，与 Workers 的 wrangler.toml 不完全相同）
+#
+# 说明：
+#  - `pages_build_output_dir` 是 Pages 专有键，指向构建产物目录；设了它之后
+#    Dashboard 里的 "Build output directory" 会以本文件为准。
+#  - Pages 的 Wrangler 配置**不支持** `main` / `routes` / `site`，
+#    也**不支持** `[triggers] crons`（Cron Trigger 是 Workers 专属能力）。
+#    保活定时任务的处置办法见 CLOUDFLARE.md「定时任务 / keepalive」。
+#  - 环境变量与 Secret 不写在这里（避免误提交密钥），一律在
+#    Cloudflare Pages 后台 → Settings → Environment variables 配置。
+#    完整清单见 CLOUDFLARE.md。
+
+name = "workbench"
+pages_build_output_dir = "_site"
+compatibility_date = "2026-08-01"
+
+# jose 走 WebCrypto，不需要 nodejs_compat；保持最小依赖面。
+# compatibility_flags = []

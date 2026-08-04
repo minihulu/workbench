@@ -1,0 +1,76 @@
+# 「我的工作台」生产编排：后端(app) + Caddy(自动 HTTPS) —— 一条命令上线
+#
+# 用法（在服务器上，项目目录建议放 /opt/workbench）：
+#   cp .env.example .env          # 改 DOMAIN / EMAIL / ADMIN_TOKEN / INVITE_CODES
+#   docker compose -f docker-compose.prod.yml up -d --build
+#   # 浏览器打开 https://你的域名/
+#   docker compose -f docker-compose.prod.yml logs -f      # 看日志
+#   docker compose -f docker-compose.prod.yml down         # 停止
+#
+# 前置条件：
+#   1) 你已经有一台公网服务器（阿里云/腾讯云/自建均可），装好 Docker + docker compose v2。
+#   2) 一个域名，A 记录已解析到这台服务器的公网 IP。
+#   3) 服务器安全组/防火墙放行 80 与 443 端口（ACME 验证 + HTTPS 需要）。
+#
+# 数据持久化：
+#   - 后端 SQLite 与自动备份在 ./data（挂卷，容器重建不丢）
+#   - Caddy 证书存在命名卷 caddy_data（重建不丢，续期自动）
+
+services:
+  workbench:
+    build: .
+    image: workbench:latest
+    container_name: workbench
+    restart: unless-stopped
+    # 只对内网 compose 网络暴露，不对外裸奔 8000
+    expose:
+      - "8000"
+    environment:
+      DATA_DIR: /data
+      PORT: "8000"
+      REGISTER_OPEN: "${REGISTER_OPEN:-0}"
+      REGISTER_REQUIRE_INVITE: "${REGISTER_REQUIRE_INVITE:-1}"
+      INVITE_CODES: "${INVITE_CODES:-}"
+      ADMIN_TOKEN: "${ADMIN_TOKEN:-}"
+      GH_TOKEN: "${GH_TOKEN:-}"
+      GH_PROXY: "${GH_PROXY:-}"
+      BACKUP_INTERVAL: "${BACKUP_INTERVAL:-21600}"
+      # —— Supabase 存储后端（可选；留空则自动回退本地 SQLite）——
+      # 填了 SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY 即自动启用 Supabase，
+      # 显式 STORAGE_BACKEND=sqlite 可强制回退。
+      STORAGE_BACKEND: "${STORAGE_BACKEND:-supabase}"
+      SUPABASE_URL: "${SUPABASE_URL:-}"
+      SUPABASE_ANON_KEY: "${SUPABASE_ANON_KEY:-}"
+      SUPABASE_SERVICE_ROLE_KEY: "${SUPABASE_SERVICE_ROLE_KEY:-}"
+      WORKBENCH_JWT_SECRET: "${WORKBENCH_JWT_SECRET:-}"
+    volumes:
+      - ./data:/data
+    networks:
+      - wbnet
+
+  caddy:
+    image: caddy:2
+    container_name: workbench-caddy
+    restart: unless-stopped
+    depends_on:
+      - workbench
+    ports:
+      - "80:80"        # ACME http-01 验证 + HTTP→HTTPS 自动跳转
+      - "443:443"
+    environment:
+      DOMAIN: "${DOMAIN}"
+      EMAIL: "${EMAIL}"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data/caddy
+      - caddy_config:/config/caddy
+    networks:
+      - wbnet
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  wbnet:
+    driver: bridge

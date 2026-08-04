@@ -1,0 +1,35 @@
+# 「我的工作台」自托管编排
+# 别人一条命令就能起：
+#   docker compose up -d        # 构建并后台启动
+#   # 打开 http://<服务器IP>:8000/
+#   docker compose logs -f     # 看日志
+#   docker compose down        # 停止
+#
+# 数据持久化在 ./data（容器内 /data，含 wb.db 与 backups/），容器重建不丢。
+
+services:
+  workbench:
+    build: .
+    image: workbench:latest
+    container_name: workbench
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DATA_DIR: /data                # 固定挂卷路径，勿改
+      PORT: "8000"
+      # —— 注册策略 ——
+      REGISTER_OPEN: "1"             # 1=公开注册；给别人用建议改 0 + 邀请码
+      REGISTER_REQUIRE_INVITE: "0"   # 改 1 则注册必须邀请码
+      INVITE_CODES: ""               # 邀请码逗号分隔，例如 wb-aaa,wb-bbb
+      ADMIN_TOKEN: ""                # 强烈建议设一段随机串，开启 /api/admin/*
+      GH_TOKEN: ""                   # GitHub PAT，提升搜索限额到 5000/h
+      GH_PROXY: ""                   # 出网代理，例如 http://127.0.0.1:7890
+      BACKUP_INTERVAL: "21600"       # 自动备份间隔秒（默认 6h），0 关闭
+    volumes:
+      - ./data:/data                 # SQLite 主库 + 自动备份，持久化
+      # 可选：把本地 wb.env 挂进容器，由 server.py 读取（多密钥更省心）
+      # - ./wb.env:/app/wb.env:ro
+    # 可选：用 env_file 统一管理密钥（需先创建 wb.env，否则 compose 报错）
+    # env_file:
+    #   - ./wb.env

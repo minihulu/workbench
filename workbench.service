@@ -1,0 +1,17 @@
+[Unit]
+Description=我的工作台 Workbench (后端 + Caddy 自动 HTTPS)
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/workbench
+# 若 docker 不在 /usr/bin，请用 `which docker` 查到后修改下面两条路径
+ExecStart=/usr/bin/docker compose -f /opt/workbench/docker-compose.prod.yml up -d
+ExecStop=/usr/bin/docker compose -f /opt/workbench/docker-compose.prod.yml down
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

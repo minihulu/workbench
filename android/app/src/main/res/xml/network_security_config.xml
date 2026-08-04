@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- cleartextTrafficPermitted=true 允许 http（本地自测用）。
+         生产建议改用 https 并在 manifest 中收紧；本配置对 https 同样兼容。 -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

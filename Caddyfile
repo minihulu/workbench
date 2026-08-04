@@ -1,0 +1,28 @@
+# 「我的工作台」Caddy 反向代理配置 —— 自动申请 + 续期 Let's Encrypt 证书
+# 本文件由 docker-compose.prod.yml 以只读方式挂载进 caddy 容器（/etc/caddy/Caddyfile）。
+# 域名(DOMAIN)与邮箱(EMAIL)来自同目录 .env；也可直接在这里硬写成真实域名。
+
+{
+    # Let's Encrypt 注册邮箱（必填，证书到期前会发提醒邮件）
+    email {$EMAIL:admin@example.com}
+
+    # 调试期若反复申请证书触发 Let's Encrypt 限额，可临时改用 staging CA（签发测试证书）：
+    # acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+# 站点域名：取 .env 里的 DOMAIN；没配则回退到占位域名（这种情况证书申请会失败，需改 .env）
+{$DOMAIN:workbench.example.com} {
+
+    # 反向代理到后端容器（compose 网络内直接用服务名 workbench 即可）
+    reverse_proxy workbench:8000 {
+        # SSE（实时多端同步）是长连接，必须立即 flush，否则推送会被缓冲导致延迟/断开
+        flush_interval -1
+    }
+
+    # 安全响应头（去掉泄露服务器标识）
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        -Server
+    }
+}

@@ -1,0 +1,2 @@
+supabase>=2.5
+PyJWT>=2.8

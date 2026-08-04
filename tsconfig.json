@@ -1,0 +1,27 @@
+{
+  "//": "Cloudflare Pages Functions 的 TypeScript 配置。仅覆盖 functions/ 与 lib/；Tauri 侧（src-tauri/）是 Rust，不受影响。",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": ["@cloudflare/workers-types"],
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": false,
+
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true
+  },
+  "include": ["functions/**/*.ts", "lib/**/*.ts"],
+  "exclude": ["node_modules", "_site", ".wrangler", "src-tauri", "build*", "dist*"]
+}
