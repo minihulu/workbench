@@ -318,19 +318,25 @@
   .fld-sub{font-size:11px; font-weight:600; color:var(--txt2); opacity:.8;}
   .idea-link-note{margin-top:14px; font-size:12.5px; color:var(--txt2); background:var(--chip); border-radius:10px; padding:9px 12px; line-height:1.6;}
 
-  /* 认知资产：App 式画面跳转（首页 hub → 阅读/书籍/思想/复盘 列表屏） */
+  /* 认知资产：App 式画面跳转（首页 hub → 阅读/书籍/思想/复盘/阅读空间/我的思考/英语表达） */
   .cog-stack{overflow:hidden;}
-  .cog-track{display:flex; width:500%; transition:transform .28s cubic-bezier(.4,0,.2,1);}
-  .cog-screen{width:20%; flex:0 0 20%;}
-  .cog-track.show-1{transform:translateX(-20%);}
-  .cog-track.show-2{transform:translateX(-40%);}
-  .cog-track.show-3{transform:translateX(-60%);}
-  .cog-track.show-4{transform:translateX(-80%);}
+  .cog-track{display:flex; width:800%; transition:transform .28s cubic-bezier(.4,0,.2,1);}
+  .cog-screen{width:12.5%; flex:0 0 12.5%;}
+  .cog-track.show-1{transform:translateX(-12.5%);}
+  .cog-track.show-2{transform:translateX(-25%);}
+  .cog-track.show-3{transform:translateX(-37.5%);}
+  .cog-track.show-4{transform:translateX(-50%);}
+  .cog-track.show-5{transform:translateX(-62.5%);}
+  .cog-track.show-6{transform:translateX(-75%);}
+  .cog-track.show-7{transform:translateX(-87.5%);}
   .cog-stack .fab{display:none;}
   .cog-track.show-1 #cogReadFab{display:block;}
   .cog-track.show-2 #cogBookFab{display:block;}
   .cog-track.show-3 #cogThoughtFab{display:block;}
   .cog-track.show-4 #cogReviewFab{display:block;}
+  .cog-track.show-5 #cogReadingFab{display:block;}
+  .cog-track.show-6 #cogAnnoFab{display:block;}
+  .cog-track.show-7 #cogExprFab{display:block;}
   .cog-hint{font-size:12.5px; color:var(--txt2); background:var(--chip); border-radius:10px; padding:9px 12px; margin-top:10px; line-height:1.6;}
   .cog-stat-note{font-size:11px; color:var(--txt2); margin-top:3px; opacity:.85;}
   /* 认知资产首页：成长感（非数据库后台） */
@@ -383,6 +389,59 @@
   .cog-cont-n{font-weight:700; font-size:14px;}
   .cog-cont-d{font-size:12px; color:var(--txt2); margin-top:3px;}
   @media(max-width:880px){ .cog-dash{grid-template-columns:1fr;} .cog-continue{grid-template-columns:1fr;} }
+
+  /* ===== 我的书架（首页预览 + 书籍库屏，复用同一卡片） ===== */
+  .shelf{display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px;}
+  .book-card{position:relative; display:flex; flex-direction:column; gap:8px; padding:12px; border-radius:14px; border:1px solid var(--line); background:var(--card); box-shadow:var(--shadow); cursor:pointer; transition:.15s; overflow:hidden;}
+  .book-card:hover{border-color:var(--brand); transform:translateY(-2px);}
+  .book-cover{width:100%; height:96px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:46px; background:linear-gradient(135deg,#6C5CE7,#0984E3); color:#fff;}
+  .book-title{font-weight:700; font-size:13.5px; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+  .book-author{font-size:11.5px; color:var(--txt2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .book-prog{height:7px; border-radius:999px; background:var(--bg2); overflow:hidden;}
+  .book-prog > i{display:block; height:100%; border-radius:999px; background:linear-gradient(90deg,#74B9FF,#0984E3);}
+  .book-meta{display:flex; justify-content:space-between; font-size:11px; color:var(--txt2);}
+  .book-meta b{color:var(--brand); font-weight:800;}
+
+  /* ===== 阅读空间（屏5） ===== */
+  .read-head{display:flex; gap:14px; align-items:center; padding:6px 0 14px;}
+  .read-cover{width:84px; height:112px; border-radius:12px; flex:none; display:flex; align-items:center; justify-content:center; font-size:50px; background:linear-gradient(135deg,#6C5CE7,#0984E3); color:#fff; box-shadow:var(--shadow);}
+  .read-title{font-size:18px; font-weight:800; line-height:1.3;}
+  .read-author{font-size:13px; color:var(--txt2); margin-top:3px;}
+  .read-prog-row{display:flex; align-items:center; gap:10px; margin:10px 0;}
+  .read-prog-row input[type=range]{flex:1;}
+  .read-prog-val{font-weight:800; color:var(--brand); min-width:42px; text-align:right;}
+  .read-pos{display:flex; gap:8px; align-items:center; margin-bottom:10px;}
+  .read-pos input{flex:1;}
+  .pdf-box{margin:10px 0; border-radius:12px; overflow:hidden; border:1px solid var(--line); background:#111;}
+  .pdf-box iframe{width:100%; height:420px; border:0; background:#fff;}
+  .excerpt{border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:10px; background:var(--card);}
+  .excerpt .ex-text{font-size:13.5px; line-height:1.65; color:var(--txt); white-space:pre-wrap;}
+  .excerpt .ex-acts{display:flex; gap:8px; margin-top:10px;}
+  .excerpt .ex-time{font-size:11px; color:var(--txt2); margin-top:6px;}
+
+  /* ===== 我的思考 / 英语表达 列表项 ===== */
+  .anno{position:relative; padding:13px; border-radius:13px; border:1px solid var(--line); background:var(--card); margin-bottom:10px; box-shadow:var(--shadow);}
+  .anno .a-book{font-size:12px; color:var(--brand); font-weight:700; margin-bottom:6px;}
+  .anno .a-orig{font-size:13px; color:var(--txt2); border-left:3px solid var(--line); padding-left:9px; margin-bottom:8px; white-space:pre-wrap; line-height:1.6;}
+  .anno .a-under{font-size:14px; line-height:1.65; white-space:pre-wrap; color:var(--txt);}
+  .anno .a-acts{display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;}
+  .anno + .anno{margin-top:2px;}
+  .expr{fadding:none;}
+  .expr{border:1px solid var(--line); border-radius:13px; padding:13px; margin-bottom:10px; background:var(--card); box-shadow:var(--shadow);}
+  .expr .e-cn{font-size:13.5px; color:var(--txt); font-weight:600; margin-bottom:7px;}
+  .expr .e-en{font-size:14.5px; line-height:1.8; color:var(--txt);}
+  .expr .e-word{cursor:pointer; border-bottom:1.5px dotted var(--brand); color:var(--brand); font-weight:600;}
+  .expr .e-word:hover{background:#0984E318;}
+  .expr .e-foot{display:flex; align-items:center; gap:10px; margin-top:9px; font-size:11.5px; color:var(--txt2); flex-wrap:wrap;}
+  .expr .e-book{color:var(--brand); font-weight:700;}
+
+  /* 词汇弹窗 */
+  .vocab-pop{position:absolute; z-index:60; max-width:260px; background:var(--card); border:1px solid var(--brand); border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.18); padding:12px 14px; font-size:13px; line-height:1.6;}
+  .vocab-pop .v-word{font-weight:800; font-size:15px;}
+  .vocab-pop .v-lev{font-size:11px; font-weight:700; padding:1px 8px; border-radius:999px; background:#0984E322; color:#0984E3; margin-left:8px;}
+  .vocab-pop .v-row{margin-top:7px;}
+  .vocab-pop .v-k{color:var(--txt2); font-weight:700; margin-right:5px;}
+  .vocab-pop .v-close{position:absolute; top:6px; right:10px; cursor:pointer; color:var(--txt2); font-size:14px;}
 
   /* content lab */
   .platform{border:1px solid var(--line); border-radius:14px; overflow:hidden; background:var(--bg2);}
@@ -973,6 +1032,13 @@
             </div>
 
             <div class="card">
+              <h2>📚 我的书架</h2>
+              <p class="card-hint">把读到的，变成想通的。点一本书进入阅读空间。</p>
+              <div id="cogShelf" class="shelf"></div>
+              <button class="btn ghost sm" data-cog-go="book" style="margin-top:12px;">查看全部书架 ›</button>
+            </div>
+
+            <div class="card">
               <h2>✍️ 继续积累</h2>
               <div class="cog-continue" id="cogNavTiles"></div>
             </div>
@@ -1023,6 +1089,39 @@
             <div class="cog-hint">每月一次：读到了什么、认知怎么变、形成了什么原则、还在困惑什么、下月计划。</div>
             <div id="cogReviewList" style="margin-top:12px;"></div>
             <button class="fab" id="cogReviewFab" title="写复盘">＋</button>
+          </div>
+
+          <!-- 屏 5：阅读空间 -->
+          <div class="cog-screen">
+            <div class="dj-topbar">
+              <button class="back-btn" data-cog-back>‹ 返回</button>
+              <span class="app-title">📖 阅读空间</span>
+              <button class="btn sm" id="cogReadingEditBook" style="margin-left:auto;">✏️ 书籍</button>
+            </div>
+            <div id="cogReadingBody"></div>
+            <button class="fab" id="cogReadingFab" title="我的思考">＋</button>
+          </div>
+
+          <!-- 屏 6：我的读书思考 -->
+          <div class="cog-screen">
+            <div class="dj-topbar">
+              <button class="back-btn" data-cog-back>‹ 返回</button>
+              <span class="app-title">💭 我的读书思考</span>
+            </div>
+            <div class="cog-hint">读书时冒出的想法，自动进入「思想痕迹」与「成长时间线」。</div>
+            <div id="cogAnnoList" style="margin-top:12px;"></div>
+            <button class="fab" id="cogAnnoFab" title="写思考">＋</button>
+          </div>
+
+          <!-- 屏 7：英语表达 -->
+          <div class="cog-screen">
+            <div class="dj-topbar">
+              <button class="back-btn" data-cog-back>‹ 返回</button>
+              <span class="app-title">🇬🇧 英语表达</span>
+            </div>
+            <div class="cog-hint">把中文思考译成四六级英语，积累个人表达资产。</div>
+            <div id="cogExprList" style="margin-top:12px;"></div>
+            <button class="fab" id="cogExprFab" title="添加表达">＋</button>
           </div>
         </div>
       </div>
@@ -1076,6 +1175,11 @@
                 <option>未开始</option><option>阅读中</option><option>已完成</option>
               </select>
             </div>
+            <div style="flex:0 0 110px;"><label class="fld">封面 emoji</label><input id="cbCover" placeholder="📕" maxlength="4"></div>
+          </div>
+          <div class="row" style="margin-top:12px;">
+            <div style="flex:1;"><label class="fld">阅读进度（%）</label><input type="number" id="cbProgress" min="0" max="100" placeholder="0"></div>
+            <div style="flex:1;"><label class="fld">PDF 链接（可选）</label><input id="cbPdf" placeholder="https://.../book.pdf"></div>
           </div>
           <label class="fld" style="margin-top:12px;">最终总结</label>
           <textarea id="cbSummary" placeholder="读完后的一句话总结"></textarea>
@@ -1150,6 +1254,35 @@
             <button class="btn ghost" id="cogReviewDelete" style="margin-right:auto;color:#c0392b;">🗑 删除</button>
             <button class="btn ghost" id="cogReviewCancel">取消</button>
             <button class="btn" id="cogReviewSave">💾 保存</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 阅读批注：我的思考 -->
+      <div class="modal" id="cogAnnoModal">
+        <div class="modal-box card" style="width:min(580px,94vw);padding:22px;">
+          <h2 style="margin-bottom:4px;">💭 我的思考</h2>
+          <p class="sub" style="margin-bottom:14px;">记录某句话带给你的想法，并可生成四六级英语表达。</p>
+          <div class="row">
+            <div style="flex:1;"><label class="fld">来源书籍</label><input id="caBook" placeholder="书名"></div>
+            <div style="flex:0 0 130px;"><label class="fld">英语等级</label>
+              <select id="caLevel"><option value="cet4">CET-4</option><option value="cet6">CET-6</option></select>
+            </div>
+          </div>
+          <label class="fld" style="margin-top:12px;">原文 / 我读到的</label>
+          <textarea id="caOrig" placeholder="粘贴或记下那句触动你的原文"></textarea>
+          <label class="fld" style="margin-top:12px;">我的中文理解</label>
+          <textarea id="caUnder" placeholder="用你自己的话讲讲它什么意思、为什么重要"></textarea>
+          <div style="display:flex;gap:10px;margin-top:12px;align-items:center;">
+            <button class="btn sm" id="caGen">🇬🇧 生成英文</button>
+            <span id="caGenStat" style="font-size:12px;color:var(--txt2);"></span>
+          </div>
+          <label class="fld" style="margin-top:12px;">英文表达（可手动修改）</label>
+          <textarea id="caEn" placeholder="点上方「生成英文」自动翻译，也可自己写"></textarea>
+          <div style="display:flex;gap:10px;margin-top:16px;justify-content:flex-end;align-items:center;">
+            <button class="btn ghost" id="cogAnnoDelete" style="margin-right:auto;color:#c0392b;">🗑 删除</button>
+            <button class="btn ghost" id="cogAnnoCancel">取消</button>
+            <button class="btn" id="cogAnnoSave">💾 保存</button>
           </div>
         </div>
       </div>
@@ -2404,7 +2537,8 @@ let cogReads = LS.get("wb_cog_reads", []);
 let cogBooks = LS.get("wb_cog_books", []);
 let cogThoughts = LS.get("wb_cog_thoughts", []);
 let cogReviews = LS.get("wb_cog_reviews", []);
-function persistCog(){ LS.set("wb_cog_reads", cogReads); LS.set("wb_cog_books", cogBooks); LS.set("wb_cog_thoughts", cogThoughts); LS.set("wb_cog_reviews", cogReviews); }
+let cogExpr = LS.get("wb_cog_expr", []);   // 英语表达资产（V2 阅读入口）
+function persistCog(){ LS.set("wb_cog_reads", cogReads); LS.set("wb_cog_books", cogBooks); LS.set("wb_cog_thoughts", cogThoughts); LS.set("wb_cog_reviews", cogReviews); LS.set("wb_cog_expr", cogExpr); }
 function saveCog(){ persistCog(); scheduleSync(); }
 function fillCogCats(){
   const opts = COG_CATS.map(c=>`<option>${c}</option>`).join("");
@@ -2431,11 +2565,14 @@ let cogScreen = 0;
 function setCogScreen(n){
   cogScreen = n;
   const t = $("#cogTrack");
-  t.classList.remove("show-1","show-2","show-3","show-4");
+  t.classList.remove("show-1","show-2","show-3","show-4","show-5","show-6","show-7");
   if(n===1) t.classList.add("show-1");
   if(n===2) t.classList.add("show-2");
   if(n===3) t.classList.add("show-3");
   if(n===4) t.classList.add("show-4");
+  if(n===5) t.classList.add("show-5");
+  if(n===6) t.classList.add("show-6");
+  if(n===7) t.classList.add("show-7");
 }
 function cogCount(k){
   if(k==="read") return cogReads.filter(r=>!r.deleted).length;
@@ -2501,7 +2638,7 @@ function renderCogHome(){
         <div class="trace-row"><span class="trace-to">现在我理解</span><span class="trace-txt">${esc(r.after)}</span></div>
         ${(r.apply||[]).length?`<div class="trace-apply">可应用于：${(r.apply||[]).map(a=>`<span class="cat-tag">${a}</span>`).join("")}</div>`:""}
       </div>`).join("");
-    $$("#cogTraces [data-open-read]").forEach(el=> el.onclick=()=> openCogRead(el.dataset.openRead));
+    $$("#cogTraces [data-open-read]").forEach(el=> el.onclick=()=>{ const r=cogReads.find(x=>x.id===el.dataset.openRead); if(r && r.kind==="annotation") openCogAnno(el.dataset.openRead); else openCogRead(el.dataset.openRead); });
   } else {
     $("#cogTraces").innerHTML = '<div class="empty">还没有留下思想痕迹。读完一本书后，在「阅读记录」里写下「现在我理解」——这里会记下你认知变化的瞬间。</div>';
   }
@@ -2520,10 +2657,14 @@ function renderCogHome(){
     date:(r.month||""), sortDate:(r.month||"2000-01")+"-01", type:"review", title:"月度复盘",
     sub:r.change||"本月复盘", id:r.id, open:"review"
   }));
+  cogExpr.filter(e=>!e.deleted).forEach(e=> items.push({
+    date:fmtDate(e.created), sortDate:fmtDate(e.created), type:"expr", title:"英语表达",
+    sub:(e.cn||"")+" → "+(e.en||""), id:e.id, open:"expr"
+  }));
   items.sort((a,b)=> (b.sortDate||"").localeCompare(a.sortDate||"") || (b.id||"").localeCompare(a.id||""));
   const tl = items.slice(0,14);
   if(tl.length){
-    const dotMap={change:"🌀",view:"💡",review:"🗓"};
+    const dotMap={change:"🌀",view:"💡",review:"🗓",expr:"🇬🇧"};
     $("#cogTimeline").innerHTML = tl.map(it=>`
       <div class="tl-item tl-${it.type}" data-open="${it.open}" data-id="${it.id}">
         <div class="tl-dot">${dotMap[it.type]}</div>
@@ -2534,11 +2675,18 @@ function renderCogHome(){
       </div>`).join("");
     $$("#cogTimeline [data-open]").forEach(el=>{
       const k=el.dataset.open, id=el.dataset.id;
-      el.onclick=()=>{ if(k==="read") openCogRead(id); else if(k==="thought") openCogThought(id); else if(k==="review") openCogReview(id); };
+      el.onclick=()=>{
+        if(k==="read"){ const r=cogReads.find(x=>x.id===id); if(r && r.kind==="annotation") openCogAnno(id); else openCogRead(id); }
+        else if(k==="thought") openCogThought(id);
+        else if(k==="review") openCogReview(id);
+      };
     });
   } else {
     $("#cogTimeline").innerHTML = '<div class="empty">时间线会随你的第一次记录开始生长。</div>';
   }
+
+  // 我的书架预览（首页「输入·阅读积累」区域入口）
+  renderCogShelf($("#cogShelf"), 4, true);
 
   // 继续积累：温柔的下一步，而不是冷冰冰的菜单
   const tiles = [
@@ -2546,13 +2694,39 @@ function renderCogHome(){
     {k:"book",   n:"📚 加一本书",   d:"建立属于你的书架"},
     {k:"thought",n:"💡 沉淀一个观点", d:"写下你的判断与原则"},
     {k:"review", n:"🗓 写月度复盘", d:"每月回看一次成长"},
+    {k:"anno",   n:"💭 我的读书思考", d:"读书中冒出的想法"},
+    {k:"expr",   n:"🇬🇧 英语表达", d:"把思考译成四六级英语"},
   ];
   $("#cogNavTiles").innerHTML = tiles.map(t=>`<button class="cog-cont" data-cog-go="${t.k}"><div class="cog-cont-n">${t.n}</div><div class="cog-cont-d">${t.d}</div></button>`).join("");
-  $$("#cogNavTiles .cog-cont").forEach(el=> el.onclick=()=> setCogScreen({read:1,book:2,thought:3,review:4}[el.dataset.cogGo]));
+  $$("#cogNavTiles .cog-cont").forEach(el=> el.onclick=()=> setCogScreen({read:1,book:2,thought:3,review:4,anno:6,expr:7}[el.dataset.cogGo]));
+}
+
+/* 书架渲染：复用同一卡片，limit 限制数量，preview=true 时点击进阅读空间 */
+function bookRecordCount(b){
+  return cogReads.filter(r=>!r.deleted && (r.book||"")===b.title).length;
+}
+function renderCogShelf(box, limit, preview){
+  if(!box) return;
+  let list = cogBooks.filter(b=>!b.deleted).slice().sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+  if(limit) list = list.slice(0, limit);
+  if(!list.length){ box.innerHTML = preview ? '<div class="empty" style="grid-column:1/-1;">书架还是空的。去「加一本书」建立你的第一本。</div>' : '<div class="empty">书架还是空的。点右下角 ＋ 加入第一本书。</div>'; return; }
+  box.innerHTML = list.map(b=>{
+    const prog = Math.max(0, Math.min(100, Number(b.progress||0)));
+    const cnt = bookRecordCount(b);
+    const cover = b.cover || "📕";
+    return `<div class="book-card" data-book="${b.id}">
+      <div class="book-cover">${esc(cover)}</div>
+      <div class="book-title">${esc(b.title||"（未命名）")}</div>
+      <div class="book-author">${esc(b.author||"未知作者")}</div>
+      <div class="book-prog"><i style="width:${prog}%"></i></div>
+      <div class="book-meta"><span>阅读进度 <b>${prog}%</b></span><span>认知记录 <b>${cnt}</b> 条</span></div>
+    </div>`;
+  }).join("");
+  $$("#cogShelf .book-card, #cogBookList .book-card").forEach(el=> el.onclick=()=> openCogReadingSpace(el.dataset.book));
 }
 /* ===== 阅读记录 ===== */
 function renderCogReads(){
-  const list = cogReads.filter(r=>!r.deleted).slice().sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.updatedAt||0)-(a.updatedAt||0));
+  const list = cogReads.filter(r=>!r.deleted && r.kind!=="annotation").slice().sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.updatedAt||0)-(a.updatedAt||0));
   const box = $("#cogReadList");
   if(!list.length){ box.innerHTML='<div class="empty">还没有阅读记录。点右下角 ＋ 或上方「新建」开始沉淀你的认知。</div>'; return; }
   box.innerHTML = list.map(r=>`
@@ -2603,15 +2777,7 @@ function delCogRead(){
 function closeCogRead(){ $("#cogReadModal").classList.remove("open"); cogReadId=null; }
 /* ===== 书籍库 ===== */
 function renderCogBooks(){
-  const list = cogBooks.filter(b=>!b.deleted).slice().sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
-  const box = $("#cogBookList");
-  if(!list.length){ box.innerHTML='<div class="empty">书籍库还是空的。点右下角 ＋ 加入第一本书。</div>'; return; }
-  box.innerHTML = list.map(b=>`
-    <div class="idea" data-open-book="${b.id}">
-      <div class="top"><div class="h">${esc(b.title||"（未命名）")}</div>${b.author?`<span class="m" style="font-size:12px;color:var(--txt2)">${esc(b.author)}</span>`:""}</div>
-      <div class="foot"><div class="tags">${bookStatusBadge(b.status)}${b.cat?`<span class="cat-tag">${esc(b.cat)}</span>`:""}</div></div>
-    </div>`).join("");
-  $$("#cogBookList [data-open-book]").forEach(el=> el.onclick=()=> openCogBookDetail(el.dataset.openBook));
+  renderCogShelf($("#cogBookList"), 0, false);
 }
 let cogBookId=null;
 function openCogBook(id){
@@ -2621,6 +2787,9 @@ function openCogBook(id){
   $("#cbAuthor").value = x ? (x.author||"") : "";
   $("#cbCat").value = x ? (x.cat||COG_CATS[0]) : COG_CATS[0];
   $("#cbStatus").value = x ? (x.status||"未开始") : "未开始";
+  $("#cbCover").value = x ? (x.cover||"📕") : "📕";
+  $("#cbProgress").value = x ? (x.progress||0) : 0;
+  $("#cbPdf").value = x ? (x.pdfUrl||"") : "";
   $("#cbSummary").value = x ? (x.summary||"") : "";
   $("#cbViews").value = x ? (x.viewpoints||"") : "";
   $("#cbReview").value = x ? (x.review||"") : "";
@@ -2630,7 +2799,7 @@ function openCogBook(id){
 function saveCogBook(){
   const title = $("#cbTitle").value.trim();
   if(!title){ toast("请填写书名"); return; }
-  const rec = { title, author:$("#cbAuthor").value.trim(), cat:$("#cbCat").value, status:$("#cbStatus").value, summary:$("#cbSummary").value.trim(), viewpoints:$("#cbViews").value.trim(), review:$("#cbReview").value.trim(), updatedAt:Date.now() };
+  const rec = { title, author:$("#cbAuthor").value.trim(), cat:$("#cbCat").value, status:$("#cbStatus").value, cover:($("#cbCover").value.trim()||"📕"), progress:Math.max(0,Math.min(100,parseInt($("#cbProgress").value||"0",10)||0)), pdfUrl:$("#cbPdf").value.trim(), summary:$("#cbSummary").value.trim(), viewpoints:$("#cbViews").value.trim(), review:$("#cbReview").value.trim(), updatedAt:Date.now() };
   if(cogBookId){ const x=cogBooks.find(b=>b.id===cogBookId); if(x) Object.assign(x, rec); toast("已更新"); }
   else { cogBooks.push(Object.assign({id:uid(), created:Date.now(), deleted:false, deviceId}, rec)); toast("已添加"); }
   saveCog(); closeCogBook(); renderCogHome(); renderCogBooks();
@@ -2776,9 +2945,257 @@ $("#cogBookDetailModal").addEventListener("click", e=>{ if(e.target.id==="cogBoo
 $("#cogThoughtModal").addEventListener("click", e=>{ if(e.target.id==="cogThoughtModal") closeCogThought(); });
 $("#cogReviewModal").addEventListener("click", e=>{ if(e.target.id==="cogReviewModal") closeCogReview(); });
 
+/* ============ 认知资产 V2：阅读入口（书架 / 阅读空间 / 我的思考 / 英语表达） ============ */
+let cogReadingBookId = null;
+let cogAnnoId = null, cogAnnoBookId = null, cogAnnoWords = [];
+
+/* ---- 阅读空间（屏5） ---- */
+function openCogReadingSpace(bookId){
+  const b = cogBooks.find(x=>x.id===bookId); if(!b) return;
+  cogReadingBookId = bookId;
+  setCogScreen(5);
+  renderCogReading();
+}
+function renderCogReading(){
+  const b = cogBooks.find(x=>x.id===cogReadingBookId); if(!b) return;
+  const prog = Math.max(0, Math.min(100, Number(b.progress||0)));
+  const cover = b.cover || "📕";
+  const excerpts = (b.excerpts||[]).filter(e=>!e.deleted).slice().sort((a,b2)=>(a.created||0)-(b2.created||0));
+  const body = $("#cogReadingBody");
+  body.innerHTML = `
+    <div class="read-head">
+      <div class="read-cover">${esc(cover)}</div>
+      <div style="min-width:0;">
+        <div class="read-title">${esc(b.title||"（未命名）")}</div>
+        <div class="read-author">${esc(b.author||"未知作者")} · ${bookStatusBadge(b.status)}</div>
+      </div>
+    </div>
+    <div class="read-prog-row">
+      <input type="range" min="0" max="100" id="crProg" value="${prog}">
+      <span class="read-prog-val" id="crProgVal">${prog}%</span>
+      <button class="btn sm" id="crProgSave">保存进度</button>
+    </div>
+    <div class="read-pos">
+      <input id="crPos" placeholder="阅读位置，如：第 52 页 / Chapter 3" value="${esc(b.lastPosition||"")}">
+    </div>
+    ${b.pdfUrl ? `<div class="pdf-box"><iframe src="${esc(b.pdfUrl)}" allow="fullscreen"></iframe></div>
+      <div class="cog-hint">PDF 由浏览器直接打开，翻页后把当前位置填到上方「阅读位置」。</div>` : ""}
+    <div class="read-pos" style="margin-top:12px;">
+      <textarea id="crExcerpt" placeholder="粘贴你读到的片段，稍后写思考"></textarea>
+      <button class="btn sm" id="crExcerptAdd">＋ 添加片段</button>
+    </div>
+    <div id="cogExcerptList" style="margin-top:10px;"></div>`;
+  // 进度
+  const progEl = $("#crProg"), progVal = $("#crProgVal");
+  progEl.oninput = ()=>{ progVal.textContent = progEl.value + "%"; };
+  progEl.onchange = saveCogProgress;
+  $("#crProgSave").onclick = saveCogProgress;
+  // 位置
+  $("#crPos").onblur = saveCogProgress;
+  // 片段
+  $("#crExcerptAdd").onclick = ()=>{
+    const t = $("#crExcerpt").value.trim(); if(!t){ toast("先粘贴读到的内容"); return; }
+    const bk = cogBooks.find(x=>x.id===cogReadingBookId); if(!bk) return;
+    bk.excerpts = bk.excerpts||[];
+    bk.excerpts.push({ id:uid(), text:t, created:Date.now(), deviceId, deleted:false });
+    bk.updatedAt = Date.now();
+    saveCog(); renderCogReading(); renderCogHome();
+    toast("已添加片段");
+  };
+  // 片段列表
+  const list = $("#cogExcerptList");
+  if(!excerpts.length){ list.innerHTML = '<div class="empty" style="padding:8px 0;">还没有阅读片段。粘贴一段你读到的文字，再写你的思考。</div>'; }
+  else {
+    list.innerHTML = excerpts.map(e=>`
+      <div class="excerpt" data-ex="${e.id}">
+        <div class="ex-text">${esc(e.text)}</div>
+        <div class="ex-time">${fmtDate(e.created)}</div>
+        <div class="ex-acts">
+          <button class="btn sm" data-act="think">✍️ 我的思考</button>
+          <button class="btn sm ghost" data-act="del">🗑</button>
+        </div>
+      </div>`).join("");
+    $$("#cogExcerptList .excerpt").forEach(el=>{
+      const eid = el.dataset.ex;
+      const ex = excerpts.find(x=>x.id===eid);
+      el.querySelector('[data-act="think"]').onclick = ()=> openCogAnno(null, cogReadingBookId, ex.text);
+      el.querySelector('[data-act="del"]').onclick = ()=>{
+        const bk = cogBooks.find(x=>x.id===cogReadingBookId); if(!bk) return;
+        bk.excerpts = (bk.excerpts||[]).map(x=> x.id===eid ? Object.assign({},x,{deleted:true, updatedAt:Date.now()}) : x);
+        saveCog(); renderCogReading(); renderCogHome();
+      };
+    });
+  }
+}
+function saveCogProgress(){
+  const b = cogBooks.find(x=>x.id===cogReadingBookId); if(!b) return;
+  const p = Math.max(0, Math.min(100, parseInt($("#crProg")?.value||b.progress||0,10)||0));
+  const pos = $("#crPos") ? $("#crPos").value.trim() : "";
+  b.progress = p; b.lastPosition = pos; b.updatedAt = Date.now();
+  saveCog(); renderCogHome();
+  if(cogScreen===5) $("#crProgVal") && ($("#crProgVal").textContent = p + "%");
+}
+
+/* ---- 阅读批注：我的思考（弹窗） ---- */
+function openCogAnno(id, bookId, origText){
+  const x = id ? cogReads.find(r=>r.id===id) : null;
+  cogAnnoId = id || null; cogAnnoBookId = bookId || (x && x.sourceBookId) || null; cogAnnoWords = [];
+  const bk = cogAnnoBookId ? cogBooks.find(b=>b.id===cogAnnoBookId) : null;
+  $("#caBook").value = x ? (x.book||"") : (bk ? bk.title : "");
+  $("#caLevel").value = (x && x.level) || "cet4";
+  $("#caOrig").value = x ? (x.original||"") : (origText||"");
+  $("#caUnder").value = x ? (x.understanding||"") : "";
+  $("#caEn").value = x ? (x.expressionEn||"") : "";
+  $("#caGenStat").textContent = "";
+  $("#cogAnnoDelete").style.display = x ? "" : "none";
+  $("#cogAnnoModal").classList.add("open");
+}
+async function caGenerate(){
+  const cn = $("#caUnder").value.trim() || $("#caOrig").value.trim();
+  if(!cn){ toast("请先写「我的中文理解」"); return; }
+  const lvl = $("#caLevel").value;
+  $("#caGenStat").textContent = "生成中…";
+  const j = await callAI("express", cn, lvl);
+  if(!j){ $("#caGenStat").textContent = ""; return; }
+  $("#caEn").value = j.english || "";
+  cogAnnoWords = j.words || [];
+  $("#caGenStat").textContent = "✅ 已生成" + (cogAnnoWords.length ? "（含 "+cogAnnoWords.length+" 个词解释）" : "");
+}
+function saveCogAnno(){
+  const book = $("#caBook").value.trim();
+  const under = $("#caUnder").value.trim();
+  const orig = $("#caOrig").value.trim();
+  const en = $("#caEn").value.trim();
+  if(!under && !en && !orig){ toast("至少填写「我的中文理解」或「英文表达」"); return; }
+  const lvl = $("#caLevel").value;
+  let anno = null;
+  if(under || orig){
+    const rec = { kind:"annotation", book, sourceBookId:cogAnnoBookId||"", original:orig, understanding:under, before:orig, after:under, chapter:"", date:todayStr(), apply:[], doubt:"", duration:0, cat:COG_CATS[0], created:Date.now(), updatedAt:Date.now(), deviceId, deleted:false };
+    if(cogAnnoId){ const x=cogReads.find(r=>r.id===cogAnnoId); if(x) Object.assign(x, rec); anno = x; toast("已更新"); }
+    else { rec.id = uid(); cogReads.push(rec); anno = rec; toast("已记录思考"); }
+  }
+  if(en){
+    const expr = { id: uid(), cn: under||orig||"", en, sourceBook:book, sourceBookId:cogAnnoBookId||"", annotationId: anno?anno.id:"", words: cogAnnoWords||[], level: lvl, created:Date.now(), updatedAt:Date.now(), deviceId, deleted:false };
+    cogExpr.push(expr);
+    if(anno) anno.expressionId = expr.id;
+    toast(anno ? "思考 + 英文已保存" : "英文表达已保存");
+  }
+  saveCog(); closeCogAnno(); renderCogHome(); renderCogBooks(); renderCogAnno(); renderCogExpr();
+}
+function delCogAnno(){
+  if(!cogAnnoId) return;
+  cogReads = cogReads.map(r=> r.id===cogAnnoId ? Object.assign({},r,{deleted:true, updatedAt:Date.now()}) : r);
+  saveCog(); closeCogAnno(); renderCogHome(); renderCogAnno();
+}
+function closeCogAnno(){ $("#cogAnnoModal").classList.remove("open"); cogAnnoId=null; }
+
+/* ---- 我的读书思考（屏6） ---- */
+function renderCogAnno(){
+  const list = cogReads.filter(r=>!r.deleted && r.kind==="annotation").slice().sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+  const box = $("#cogAnnoList");
+  if(!box) return;
+  if(!list.length){ box.innerHTML='<div class="empty">还没有读书思考。进入一本书的阅读空间，点「我的思考」开始沉淀。</div>'; return; }
+  box.innerHTML = list.map(r=>`
+    <div class="anno" data-anno="${r.id}">
+      <div class="a-book">《${esc(r.book||"？")}》</div>
+      ${r.original?`<div class="a-orig">“${esc(r.original)}”</div>`:""}
+      <div class="a-under">${esc(r.understanding||"")}</div>
+      <div class="a-acts">
+        ${r.expressionId?"":`<button class="btn sm" data-act="gen">🇬🇧 生成英文</button>`}
+        <button class="btn sm ghost" data-act="edit">✏️ 编辑</button>
+        <button class="btn sm ghost" data-act="del">🗑</button>
+      </div>
+    </div>`).join("");
+  $$("#cogAnnoList .anno").forEach(el=>{
+    const id = el.dataset.anno; const r = list.find(x=>x.id===id);
+    const gen = el.querySelector('[data-act="gen"]'); if(gen) gen.onclick = ()=> genExprFromAnno(r);
+    el.querySelector('[data-act="edit"]').onclick = ()=> openCogAnno(id);
+    el.querySelector('[data-act="del"]').onclick = ()=>{ cogAnnoId=id; delCogAnno(); };
+  });
+}
+async function genExprFromAnno(r){
+  const cn = r.understanding || r.original; if(!cn){ toast("这条思考没有可翻译的内容"); return; }
+  const j = await callAI("express", cn, r.level||"cet4");
+  if(!j) return;
+  const expr = { id: uid(), cn, en: j.english||"", sourceBook:r.book||"", sourceBookId:r.sourceBookId||"", annotationId: r.id, words: j.words||[], level: r.level||"cet4", created:Date.now(), updatedAt:Date.now(), deviceId, deleted:false };
+  cogExpr.push(expr); r.expressionId = expr.id; r.updatedAt = Date.now();
+  saveCog(); renderCogAnno(); renderCogExpr(); toast("已生成英文表达");
+}
+
+/* ---- 英语表达（屏7） ---- */
+function renderExprEn(en, words){
+  if(!en) return "";
+  const wl = (words||[]).map(w=>(w.word||"").toLowerCase()).filter(Boolean);
+  return en.split(/(\s+)/).map(t=>{
+    const clean = t.replace(/[^A-Za-z'-]/g,"").toLowerCase();
+    if(clean && wl.includes(clean)) return `<span class="e-word" data-word="${esc(clean)}">${esc(t)}</span>`;
+    return esc(t);
+  }).join("");
+}
+function renderCogExpr(){
+  const list = cogExpr.filter(e=>!e.deleted).slice().sort((a,b)=>(b.created||0)-(a.created||0));
+  const box = $("#cogExprList");
+  if(!box) return;
+  if(!list.length){ box.innerHTML='<div class="empty">还没有英语表达。在「我的思考」里点「生成英文」，把中文思考译成四六级英语。</div>'; return; }
+  box.innerHTML = list.map(e=>`
+    <div class="expr">
+      <div class="e-cn">${esc(e.cn||"")}</div>
+      <div class="e-en">${renderExprEn(e.en, e.words)}</div>
+      <div class="e-foot"><span class="e-book">《${esc(e.sourceBook||"")}》</span><span>${e.level?e.level.toUpperCase():""}</span><span>${fmtDate(e.created)}</span></div>
+    </div>`).join("");
+  $$("#cogExprList .e-word").forEach(el=>{
+    el.onclick = (ev)=>{
+      const e = list.find(x=> (x.words||[]).some(w=> (w.word||"").toLowerCase()===el.dataset.word));
+      showVocab(el.dataset.word, el, e ? e.words : []);
+      ev.stopPropagation();
+    };
+  });
+}
+function showVocab(word, anchor, words){
+  closeVocab();
+  const w = (words||[]).find(x=> (x.word||"").toLowerCase()===word.toLowerCase());
+  if(!w){ toast("该词暂无解释（生成英文时未包含）"); return; }
+  const pop = document.createElement("div");
+  pop.className = "vocab-pop";
+  pop.innerHTML = `<span class="v-close" onclick="closeVocab()">×</span>
+    <div><span class="v-word">${esc(w.word)}</span><span class="v-lev">${esc(w.level||"")}</span></div>
+    <div class="v-row"><span class="v-k">意思</span>${esc(w.meaning||"")}</div>
+    <div class="v-row"><span class="v-k">语境</span>${esc(w.context||"")}</div>
+    <div class="v-row"><span class="v-k">搭配</span>${esc(w.collocations||"")}</div>`;
+  document.body.appendChild(pop);
+  const r = anchor.getBoundingClientRect();
+  pop.style.top = Math.min(window.innerHeight-170, r.bottom+8) + "px";
+  pop.style.left = Math.max(8, Math.min(window.innerWidth-272, r.left)) + "px";
+}
+function closeVocab(){ const p=document.querySelector(".vocab-pop"); if(p) p.remove(); }
+
+/* ---- AI 调用（兼容 OpenAI，默认 DeepSeek） ---- */
+async function callAI(task, text, level){
+  if(!apiToken){ toast("请先登录"); return null; }
+  try{
+    const r = await fetch("/api/ai/ask", {method:"POST", headers:apiHeaders(), body:JSON.stringify({task, text, level})});
+    const j = await r.json().catch(()=>({}));
+    if(!r.ok){ toast("AI 调用失败：" + (j.error||r.status)); return null; }
+    if(!j.ok){ toast(j.error==="AI_NOT_CONFIGURED" ? "AI 未配置：请在 Cloudflare 添加 DEEPSEEK_API_KEY" : ("AI：" + (j.error||"失败"))); return null; }
+    return j;
+  }catch(e){ toast("AI 网络错误"); return null; }
+}
+
+/* ---- 阅读空间 / 批注 / 表达 事件绑定 ---- */
+$("#cogReadingEditBook").onclick = ()=> openCogBook(cogReadingBookId);
+$("#cogReadingFab").onclick = ()=> openCogAnno(null, cogReadingBookId, "");
+$("#cogAnnoFab").onclick = ()=> openCogAnno(null, null, "");
+$("#cogExprFab").onclick = ()=> openCogAnno(null, null, "");
+$("#caGen").onclick = caGenerate;
+$("#cogAnnoSave").onclick = saveCogAnno;
+$("#cogAnnoCancel").onclick = closeCogAnno;
+$("#cogAnnoDelete").onclick = delCogAnno;
+$("#cogAnnoModal").addEventListener("click", e=>{ if(e.target.id==="cogAnnoModal") closeCogAnno(); });
+document.addEventListener("click", e=>{ if(!e.target.closest(".vocab-pop") && !e.target.closest(".e-word")) closeVocab(); });
+
 /* ============ 导出 ============ */
 $("#exportBtn").onclick = ()=>{
-  const data = { export_at:new Date().toISOString(), times, ideas, notes, diary, cog_reads:cogReads, cog_books:cogBooks, cog_thoughts:cogThoughts, cog_reviews:cogReviews, directions, reviews };
+  const data = { export_at:new Date().toISOString(), times, ideas, notes, diary, cog_reads:cogReads, cog_books:cogBooks, cog_thoughts:cogThoughts, cog_reviews:cogReviews, cog_expr:cogExpr, directions, reviews };
   const blob = new Blob([JSON.stringify(data,null,2)], {type:"application/json"});
   const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
   a.download="workbench-backup-"+todayStr()+".json"; a.click(); toast("已导出备份");
@@ -2820,7 +3237,7 @@ function syncInviteRow(){
 }
 function apiHeaders(){ return apiToken ? {"Authorization":"Bearer "+apiToken, "Content-Type":"application/json"} : {"Content-Type":"application/json"}; }
 function fmtSync(at){ if(!at) return "尚未同步"; return new Date(at*1000).toLocaleString("zh-CN"); }
-function refreshAll(){ renderIdeaHome(); renderIdeaStream(); renderIdeaFilters(); renderNotes(); refreshTime(); renderTimer(); renderDjCalendar(); renderCogHome(); renderCogReads(); renderCogBooks(); renderCogThoughts(); renderCogReviews(); }
+function refreshAll(){ renderIdeaHome(); renderIdeaStream(); renderIdeaFilters(); renderNotes(); refreshTime(); renderTimer(); renderDjCalendar(); renderCogHome(); renderCogReads(); renderCogBooks(); renderCogThoughts(); renderCogReviews(); renderCogAnno(); renderCogExpr(); }
 async function pullSync(){
   if(!apiToken) return;
   try{
@@ -2836,6 +3253,7 @@ async function pullSync(){
       cogBooks = mergeRecords(cogBooks, j.payload.cog_books);
       cogThoughts = mergeRecords(cogThoughts, j.payload.cog_thoughts);
       cogReviews = mergeRecords(cogReviews, j.payload.cog_reviews);
+      cogExpr = mergeRecords(cogExpr, j.payload.cog_expr||[]);
       directions = mergeRecords(directions, j.payload.directions||[]).map(normDir);
       reviews = mergeRecords(reviews, j.payload.reviews||[]).map(normReview);
       if(j.payload.settings && j.payload.settings.theme) applyTheme(j.payload.settings.theme);
@@ -2847,7 +3265,7 @@ async function pullSync(){
 }
 async function pushSync(){
   if(!apiToken) return null;
-  const payload = { times, ideas, notes, diary, cog_reads:cogReads, cog_books:cogBooks, cog_thoughts:cogThoughts, cog_reviews:cogReviews, directions, reviews, settings:{ theme: document.documentElement.getAttribute("data-theme")||"light" } };
+  const payload = { times, ideas, notes, diary, cog_reads:cogReads, cog_books:cogBooks, cog_thoughts:cogThoughts, cog_reviews:cogReviews, cog_expr:cogExpr, directions, reviews, settings:{ theme: document.documentElement.getAttribute("data-theme")||"light" } };
   try{
     const r = await fetch("/api/sync/push", {method:"POST", headers:apiHeaders(), body:JSON.stringify({payload})});
     const j = await r.json().catch(()=>({}));
@@ -3012,7 +3430,7 @@ if(apiToken){ pullSync(); startSyncStream(); }
 loadWbConfig();   // 拉取服务端配置（是否需邀请码注册、第三方登录是否可用）
 renderNotes();    // 待办首屏渲染
 fillCogCats();   // 认知资产：填充分类下拉
-renderCogHome(); renderCogReads(); renderCogBooks(); renderCogThoughts(); renderCogReviews();
+renderCogHome(); renderCogReads(); renderCogBooks(); renderCogThoughts(); renderCogReviews(); renderCogAnno(); renderCogExpr();
 </script>
 </body>
 </html>
