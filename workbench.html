@@ -474,6 +474,9 @@
   .pdf-pages{padding:14px; background:#525659; max-height:78vh; overflow:auto; text-align:center;}
   .pdf-page{display:inline-block; position:relative; margin:0 auto; background:#fff; box-shadow:0 2px 12px rgba(0,0,0,.35);}
   .pdf-page canvas{display:block; width:100%; height:auto;}
+  /* 自适应兜底：未主动放大（zoom<=1）时页面绝不超出阅读容器；放大时不加 .fit，允许横向滚动 */
+  .pdf-page.fit{max-width:100%;}
+  .pdf-page.fit canvas{max-width:100%; height:auto !important;}
   .pdf-page .textLayer{position:absolute; inset:0; overflow:hidden; line-height:1; text-size-adjust:none; transform-origin:0 0; z-index:2;}
   .pdf-page .textLayer span, .pdf-page .textLayer br{color:transparent; position:absolute; white-space:pre; cursor:text; transform-origin:0% 0%;}
   .pdf-page .textLayer ::selection{background:rgba(98,120,255,.35);}
@@ -493,6 +496,13 @@
   .pdf-page .textLayer span.hl:hover{background:rgba(245,158,11,.7);}
   .pdf-page-slot{display:block; margin:0 auto 14px; background:#fff; box-shadow:0 2px 12px rgba(0,0,0,.35); position:relative; min-height:70vh;}
   .pdf-pages.scroll{text-align:center;}
+  /* 小屏：压缩阅读区内边距，把宽度尽量让给页面本身（放在 .pdf-pages 之后，保证覆盖生效） */
+  @media (max-width: 760px){
+    .pdf-pages{padding:8px; max-height:72vh;}
+    .pdf-page-slot{margin-bottom:8px; min-height:50vh;}
+    .pdf-toolbar{gap:4px; padding:6px 8px;}
+    .pdf-toolbar button{padding:5px 7px;}
+  }
   /* 书架「继续阅读」角标 */
   .book-resume{position:absolute; top:8px; right:8px; background:var(--brand); color:#fff; font-size:10.5px; font-weight:700; padding:3px 8px; border-radius:999px; box-shadow:0 2px 8px rgba(0,0,0,.25);}
   /* 批注流「高亮」徽章 */
@@ -3312,7 +3322,7 @@ async function renderCogReadingFile(){
     const url = j.url;
     const type = (b.file.type || "").toLowerCase();
     if(type === "application/pdf" || /\.pdf$/i.test(b.file.name||"")){
-      pdfDoc = null; pdfRendered.clear(); pdfPageDivs = {};   // 切换书籍时重置解析缓存，避免串书
+      pdfDoc = null; pdfRendered.clear(); pdfVisible.clear(); pdfPageDivs = {};   // 切换书籍时重置解析缓存，避免串书
       await renderPdfBook(b, url);
       setFileState('☁️ 云端文件：'+(b.file.name||''), 'cloud');
     } else if(type.startsWith("text/") || /\.(txt|md)$/i.test(b.file.name||"")){
@@ -3349,9 +3359,12 @@ async function ensurePdfJs(){
   return _pdfjsPromise;
 }
 /* === PDF 阅读器共享状态（单页 / 滚动双模式 + 本地缓存） === */
+// pdfScale = pdfFitScale × pdfZoom：pdfFitScale 由阅读容器宽度实时算出（fit-to-width），pdfZoom 是用户主动缩放倍率
 let pdfDoc=null, pdfTotal=0, pdfScale=1.4;
+let pdfFitScale=1.4, pdfZoom=1;
 let pdfBook=null, pdfPagesEl=null, pdfSourceRaw=null;
 let pdfMode='page', pdfPageDivs={}, pdfRendered=new Set(), pdfIO=null;
+let pdfVisible=new Set();               // 滚动模式下当前处于可视区（含 IO rootMargin）的页码
 let _pdfCacheDB=null;
 function openPdfCacheDB(){ return new Promise((res)=>{ try{ if(_pdfCacheDB) return res(_pdfCacheDB); const r=indexedDB.open('wb_pdf_cache',1); r.onupgradeneeded=()=>{ try{ r.result.createObjectStore('pdfs'); }catch(_){} }; r.onsuccess=()=>{ _pdfCacheDB=r.result; res(r.result); }; r.onerror=()=>{ res(null); }; }catch(e){ res(null); } }); }
 async function pdfCacheGet(bookId){ try{ const db=await openPdfCacheDB(); if(!db) return null; return await new Promise((res)=>{ const tx=db.transaction('pdfs','readonly'); const rq=tx.objectStore('pdfs').get(bookId); rq.onsuccess=()=>res(rq.result||null); rq.onerror=()=>res(null); }); }catch(e){ return null; } }
@@ -3381,7 +3394,7 @@ async function renderPdfBook(b, source){
         <button id="pdfModeBtn" class="btn sm ghost" title="切换翻页 / 滚动">${pdfMode==='scroll'?'📄 单页':'📜 滚动'}</button>
         <span class="pdf-zoom">缩放</span>
         <button id="pdfZoomOut" class="btn sm ghost">－</button>
-        <span class="pdf-pageinfo" id="pdfZoomVal">${Math.round(pdfScale*100)}%</span>
+        <span class="pdf-pageinfo" id="pdfZoomVal">${Math.round(pdfZoom*100)}%</span>
         <button id="pdfZoomIn" class="btn sm ghost">＋</button>
         <span style="flex:1;"></span>
         <button id="pdfPageAnno" class="btn sm" title="对当前这一页写批注">📝 对本页写批注</button>
@@ -3410,6 +3423,7 @@ async function renderPdfBook(b, source){
   const pagesEl = $("#pdfPages");
   pdfPagesEl = pagesEl;
   bindPdfToolbar(doc, total, pagesEl, b);
+  bindPdfResize(doc, total, pagesEl, b);   // 窗口/设备宽度变化时按新容器宽度重排（debounce）
   loadPdfOutline(doc);
   if(pdfMode === 'scroll'){
     layoutScroll(doc, total, pagesEl, b, startPage);
@@ -3433,7 +3447,11 @@ function bindPdfToolbar(doc, total, pagesEl, b){
     const toc=$("#pdfToc"); if(!toc) return;
     const mobile=window.matchMedia("(max-width:760px)").matches;
     if(mobile){ toc.classList.toggle('show'); toc.classList.remove('hidden'); }
-    else { toc.classList.toggle('hidden'); toc.classList.remove('show'); }
+    else {
+      toc.classList.toggle('hidden'); toc.classList.remove('show');
+      // 桌面端收起/展开目录会改变阅读区可用宽度 → 按新宽度重排（移动端目录是浮层，不占宽度）
+      requestAnimationFrame(()=>{ _pdfLastW = pdfContainerWidth(pagesEl); pdfRelayout(doc,total,pagesEl,b); });
+    }
   };
   $("#pdfJumpBtn").onclick = ()=>{ const n=parseInt($("#pdfJump").value||"0",10); if(n>=1&&n<=total) pdfGoToPage(doc,total,pagesEl,b,n); };
   $("#pdfModeBtn").onclick = ()=>{
@@ -3442,20 +3460,134 @@ function bindPdfToolbar(doc, total, pagesEl, b){
     if(pdfMode==='scroll') layoutScroll(doc,total,pagesEl,b,pdfCurrentPage);
     else renderPage(doc,total,pagesEl,b,pdfCurrentPage);
   };
-  $("#pdfZoomIn").onclick = ()=>{ const s=Math.min(3, pdfScale+0.2); onPdfZoom(doc,total,pagesEl,b,s); };
-  $("#pdfZoomOut").onclick = ()=>{ const s=Math.max(0.6, pdfScale-0.2); onPdfZoom(doc,total,pagesEl,b,s); };
-  $("#pdfZoomVal").textContent = Math.round(pdfScale*100)+'%';
+  // 缩放倍率以「适应宽度」为 100% 基线：pdfZoom=1 即页面正好铺满阅读容器
+  $("#pdfZoomIn").onclick = ()=>{ onPdfZoom(doc,total,pagesEl,b, Math.min(3, Math.round((pdfZoom+0.2)*100)/100)); };
+  $("#pdfZoomOut").onclick = ()=>{ onPdfZoom(doc,total,pagesEl,b, Math.max(0.5, Math.round((pdfZoom-0.2)*100)/100)); };
+  $("#pdfZoomVal").textContent = Math.round(pdfZoom*100)+'%';
   $("#pdfPageAnno").onclick = ()=>{ openCogAnno(null, b.id, '', pdfCurrentPage); toast('已为第 '+pdfCurrentPage+' 页打开批注'); };
 }
-function onPdfZoom(doc, total, pagesEl, b, s){
-  pdfScale = s;
-  $("#pdfZoomVal").textContent = Math.round(s*100)+'%';
-  if(pdfMode==='scroll'){
-    const done=[...pdfRendered]; pdfRendered.clear();
-    done.forEach(i=> renderScrollPage(doc,total,pagesEl,b,i));
+
+/* === 自适应：阅读容器可用宽度 → fit-to-width 基准 scale === */
+let _pdfSbW = null;
+// 纵向滚动条宽度（移动端 overlay 滚动条为 0），只测一次
+function pdfScrollbarWidth(){
+  if(_pdfSbW != null) return _pdfSbW;
+  try{
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:absolute; top:-9999px; left:-9999px; width:100px; height:100px; overflow:scroll;';
+    document.body.appendChild(probe);
+    _pdfSbW = probe.offsetWidth - probe.clientWidth;
+    document.body.removeChild(probe);
+  }catch(e){ _pdfSbW = 15; }
+  if(!(_pdfSbW > 0)) _pdfSbW = 0;
+  return _pdfSbW;
+}
+// 阅读区内容宽度（扣掉 padding；若此刻还没出现纵向滚动条则预留其宽度，避免渲染后横向溢出）
+function pdfContainerWidth(el){
+  const box = el || pdfPagesEl || $("#pdfPages");
+  if(!box) return 0;
+  let w = box.clientWidth || 0;
+  try{
+    const cs = getComputedStyle(box);
+    w -= (parseFloat(cs.paddingLeft)||0) + (parseFloat(cs.paddingRight)||0);
+  }catch(e){}
+  if(box.scrollHeight <= box.clientHeight + 1) w -= pdfScrollbarWidth();
+  return Math.max(120, Math.floor(w) - 2);   // 留 2px 余量，规避亚像素取整
+}
+// 依据某一页的原始尺寸 + 容器宽度刷新 pdfFitScale / pdfScale，返回生效的 scale
+function syncPdfScale(page, containerW){
+  try{
+    const base = page.getViewport({ scale: 1 });   // 已含页面 rotation
+    const cw = containerW || pdfContainerWidth();
+    if(cw > 0 && base.width > 0){
+      pdfFitScale = Math.min(6, Math.max(0.1, cw / base.width));
+    }
+  }catch(e){}
+  pdfScale = pdfFitScale * pdfZoom;
+  return pdfScale;
+}
+// 高清渲染倍率：以 devicePixelRatio 为准，再按 canvas 面积/边长硬上限收敛
+// （小屏高 DPR 手机面积小，能吃满 2×/3×；大屏 + 高倍放大时才会降倍率，避免 canvas 分配失败 / 显存暴涨）
+const PDF_MAX_CANVAS_PX = 12 * 1024 * 1024;   // 单页 canvas 像素上限（≈48MB 显存）
+const PDF_MAX_CANVAS_SIDE = 8192;             // 单边上限（各浏览器普遍安全值）
+function pdfDprFor(viewport){
+  let r = window.devicePixelRatio || 1;
+  if(!(r > 0)) r = 1;
+  const w = viewport.width || 1, h = viewport.height || 1;
+  if(w * h * r * r > PDF_MAX_CANVAS_PX) r = Math.sqrt(PDF_MAX_CANVAS_PX / (w * h));
+  const sideCap = PDF_MAX_CANVAS_SIDE / Math.max(w, h);
+  if(r > sideCap) r = sideCap;
+  // 允许低于 1：极端放大（如 4K 屏 300%）时宁可略糊也不能让 canvas 创建失败导致白页
+  return Math.max(0.25, r);
+}
+// 滚动模式显存回收：只回收「已渲染但已滚出可视区」的页，超出保留窗口的按离当前页距离由远及近释放。
+// 释放时把 slot 的高度固定成回收前的实测高度，避免滚动条跳动；页面再次进入可视区时 IO 会重新触发渲染。
+const PDF_KEEP_PAGES = 6;
+function pdfEvictFarPages(){
+  if(pdfMode !== 'scroll') return;
+  if(pdfRendered.size <= PDF_KEEP_PAGES) return;
+  const candidates = [...pdfRendered]
+    .filter(n => !pdfVisible.has(n) && n !== pdfCurrentPage)
+    .sort((a,b)=> Math.abs(b-pdfCurrentPage) - Math.abs(a-pdfCurrentPage));   // 离当前页最远的先回收
+  let over = pdfRendered.size - PDF_KEEP_PAGES;
+  for(const n of candidates){
+    if(over <= 0) break;
+    const slot = pdfPageDivs[n];
+    if(!slot){ pdfRendered.delete(n); over--; continue; }
+    const h = slot.offsetHeight;
+    if(h > 0) slot.style.minHeight = h + 'px';   // 冻结高度，防止回收后页面塌陷、滚动位置乱跳
+    slot.innerHTML = '<div class="cog-hint">第 '+n+' 页</div>';
+    pdfRendered.delete(n);
+    over--;
+  }
+}
+// 缩放 / 窗口尺寸变化后的统一重排：单页重渲染当前页，滚动模式重渲染已渲染过的页并保持阅读位置
+function pdfRelayout(doc, total, pagesEl, b){
+  if(!doc || !pagesEl) return;
+  if(pdfMode === 'scroll'){
+    const cur = pdfCurrentPage;
+    let done = [...pdfRendered];
+    pdfRendered.clear();
+    if(!done.length) done = [cur];               // 还没渲染过任何页时，至少把当前页排出来
+    // 清掉回收时冻结的高度：新宽度下旧高度已失效，重排后统一由内容与 CSS min-height 决定
+    Object.values(pdfPageDivs).forEach(s=>{ if(s && s.style) s.style.minHeight = ''; });
+    Promise.all(done.map(i=> renderScrollPage(doc,total,pagesEl,b,i))).then(()=>{
+      const slot = pdfPageDivs[cur]; if(slot) slot.scrollIntoView();
+    }).catch(()=>{});
   } else {
     renderPage(doc,total,pagesEl,b,pdfCurrentPage);
   }
+}
+function onPdfZoom(doc, total, pagesEl, b, z){
+  pdfZoom = z;
+  const el = $("#pdfZoomVal"); if(el) el.textContent = Math.round(z*100)+'%';
+  pdfRelayout(doc, total, pagesEl, b);
+}
+
+/* === 多端自适应：窗口尺寸 / 设备像素比变化时按新容器宽度重排（debounce 200ms） === */
+let _pdfResizeCtx = null, _pdfResizeBound = false, _pdfResizeTimer = null;
+let _pdfLastW = 0, _pdfLastDpr = 0;
+function bindPdfResize(doc, total, pagesEl, b){
+  _pdfResizeCtx = { doc, total, pagesEl, b };
+  _pdfLastW = pdfContainerWidth(pagesEl);
+  _pdfLastDpr = window.devicePixelRatio || 1;
+  if(_pdfResizeBound) return;   // window 监听全局只绑一次，靠 _pdfResizeCtx 指向当前阅读器
+  _pdfResizeBound = true;
+  window.addEventListener('resize', ()=>{
+    clearTimeout(_pdfResizeTimer);
+    _pdfResizeTimer = setTimeout(onPdfViewportResize, 200);
+  });
+}
+function onPdfViewportResize(){
+  const ctx = _pdfResizeCtx; if(!ctx) return;
+  const el = ctx.pagesEl;
+  if(!el || !document.body.contains(el)){ _pdfResizeCtx = null; return; }   // 阅读器已卸载
+  const w = pdfContainerWidth(el);
+  const dpr = window.devicePixelRatio || 1;
+  // 宽度无实质变化（如移动端地址栏收起只改高度）且 DPR 未变则不重排，避免无谓抖动
+  if(w > 0 && Math.abs(w - _pdfLastW) < 8 && Math.abs(dpr - _pdfLastDpr) < 0.01) return;
+  _pdfLastW = w; _pdfLastDpr = dpr;
+  pdfRelayout(ctx.doc, ctx.total, el, ctx.b);
 }
 function pdfGoToPage(doc, total, pagesEl, b, n){
   if(n<1||n>total) return;
@@ -3473,20 +3605,25 @@ async function renderPage(doc, total, pagesEl, b, n){
   pagesEl.classList.remove('scroll');
   if(pdfIO){ try{ pdfIO.disconnect(); }catch(_){} pdfIO = null; }
   pagesEl.onscroll = null;
-  pdfPageDivs = {}; pdfRendered.clear();
+  pdfPageDivs = {}; pdfRendered.clear(); pdfVisible.clear();
+  const cw = pdfContainerWidth(pagesEl);   // 先量宽度：占位提示会让滚动条消失，量晚了会偏大
   pagesEl.innerHTML = '<div class="cog-hint">渲染第 '+n+' 页…</div>';
   const page = await doc.getPage(n);
-  const viewport = page.getViewport({ scale: pdfScale });
+  syncPdfScale(page, cw);                                        // fit-to-width × 用户缩放
+  const lVp = page.getViewport({ scale: pdfScale });             // 逻辑（CSS）尺寸：布局 + 文字层
+  const dpr = pdfDprFor(lVp);                                    // 高清倍率（含 canvas 上限保护）
+  const rVp = page.getViewport({ scale: pdfScale * dpr });       // 物理分辨率：canvas 实际渲染
   const pageDiv = document.createElement('div');
-  pageDiv.className = 'pdf-page';
-  pageDiv.style.width = Math.floor(viewport.width)+'px';
+  pageDiv.className = 'pdf-page' + (pdfZoom <= 1 ? ' fit' : '');
+  pageDiv.style.width = Math.floor(lVp.width)+'px';
   const canvas = document.createElement('canvas');
-  canvas.width = Math.floor(viewport.width); canvas.height = Math.floor(viewport.height);
+  canvas.width = Math.floor(rVp.width); canvas.height = Math.floor(rVp.height);
+  canvas.style.width = Math.floor(lVp.width)+'px'; canvas.style.height = Math.floor(lVp.height)+'px';
   pageDiv.appendChild(canvas);
   pagesEl.innerHTML = ''; pagesEl.appendChild(pageDiv);
   const ctx = canvas.getContext('2d');
-  await page.render({ canvasContext: ctx, viewport }).promise;
-  try { const textContent = await page.getTextContent(); pageDiv.appendChild(buildTextLayer(textContent, viewport)); } catch(_) {}
+  await page.render({ canvasContext: ctx, viewport: rVp }).promise;
+  try { const textContent = await page.getTextContent(); pageDiv.appendChild(buildTextLayer(textContent, lVp)); } catch(_) {}
   updatePdfPageInfo(total);
   highlightTocCurrent(n);
   applyHighlights(pagesEl, b.id, n);
@@ -3495,7 +3632,7 @@ async function renderPage(doc, total, pagesEl, b, n){
 function layoutScroll(doc, total, pagesEl, b, startPage){
   pagesEl.classList.add('scroll');
   pagesEl.innerHTML = '';
-  pdfPageDivs = {}; pdfRendered.clear();
+  pdfPageDivs = {}; pdfRendered.clear(); pdfVisible.clear();
   for(let i=1;i<=total;i++){
     const slot = document.createElement('div');
     slot.className = 'pdf-page-slot';
@@ -3506,7 +3643,12 @@ function layoutScroll(doc, total, pagesEl, b, startPage){
   }
   if(pdfIO) try{ pdfIO.disconnect(); }catch(_){}
   pdfIO = new IntersectionObserver((entries)=>{
-    entries.forEach(en=>{ if(en.isIntersecting){ renderScrollPage(doc,total,pagesEl,b, parseInt(en.target.dataset.page,10)); } });
+    entries.forEach(en=>{
+      const p = parseInt(en.target.dataset.page, 10);
+      if(!p) return;
+      if(en.isIntersecting){ pdfVisible.add(p); renderScrollPage(doc,total,pagesEl,b,p); }
+      else { pdfVisible.delete(p); }   // 滚出可视区：标记为可回收（显存回收在渲染后统一执行）
+    });
   }, { root: pagesEl, rootMargin: '400px' });
   Object.values(pdfPageDivs).forEach(d=>pdfIO.observe(d));
   setupScrollSpy(doc, total, pagesEl, b);
@@ -3516,22 +3658,29 @@ async function renderScrollPage(doc, total, pagesEl, b, n){
   if(pdfRendered.has(n)) return;
   const slot = pdfPageDivs[n]; if(!slot) return;
   pdfRendered.add(n);
+  const cw = pdfContainerWidth(pagesEl);   // 滚动模式容器宽度稳定，先量再改 DOM
+  slot.style.minHeight = '';               // 清掉回收时冻结的高度，交回内容撑开
   slot.innerHTML = '<div class="cog-hint">渲染第 '+n+' 页…</div>';
   try {
     const page = await doc.getPage(n);
-    const viewport = page.getViewport({ scale: pdfScale });
+    syncPdfScale(page, cw);                                        // fit-to-width × 用户缩放
+    const lVp = page.getViewport({ scale: pdfScale });             // 逻辑（CSS）尺寸：布局 + 文字层
+    const dpr = pdfDprFor(lVp);                                    // 高清倍率（含 canvas 上限保护）
+    const rVp = page.getViewport({ scale: pdfScale * dpr });       // 物理分辨率：canvas 实际渲染
     const pageDiv = document.createElement('div');
-    pageDiv.className = 'pdf-page';
-    pageDiv.style.width = Math.floor(viewport.width)+'px';
+    pageDiv.className = 'pdf-page' + (pdfZoom <= 1 ? ' fit' : '');
+    pageDiv.style.width = Math.floor(lVp.width)+'px';
     const canvas = document.createElement('canvas');
-    canvas.width = Math.floor(viewport.width); canvas.height = Math.floor(viewport.height);
+    canvas.width = Math.floor(rVp.width); canvas.height = Math.floor(rVp.height);
+    canvas.style.width = Math.floor(lVp.width)+'px'; canvas.style.height = Math.floor(lVp.height)+'px';
     pageDiv.appendChild(canvas);
     slot.innerHTML = ''; slot.appendChild(pageDiv);
     const ctx = canvas.getContext('2d');
-    await page.render({ canvasContext: ctx, viewport }).promise;
-    try { const textContent = await page.getTextContent(); pageDiv.appendChild(buildTextLayer(textContent, viewport)); } catch(_) {}
+    await page.render({ canvasContext: ctx, viewport: rVp }).promise;
+    try { const textContent = await page.getTextContent(); pageDiv.appendChild(buildTextLayer(textContent, lVp)); } catch(_) {}
     applyHighlights(slot, b.id, n);
     highlightTocCurrent(n);
+    pdfEvictFarPages();   // 高清 canvas 显存占用是原来的 dpr² 倍，长文档需要及时回收远处页面
   } catch(e){ slot.innerHTML = '<div class="cog-hint">第 '+n+' 页渲染失败</div>'; pdfRendered.delete(n); }
 }
 function setupScrollSpy(doc, total, pagesEl, b){
