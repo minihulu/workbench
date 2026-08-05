@@ -14,17 +14,17 @@
  *
  * ⚠️ eqFilter 的值不加引号（见 lib/supabase.ts 注释），uuid 列会被 PostgREST 正确解析。
  */
-import { guard, jsonResponse } from '../../lib/json.ts';
-import { requireUser } from '../../lib/auth.ts';
+import { guard, jsonResponse } from '../../../lib/json.ts';
+import { requireUser } from '../../../lib/auth.ts';
 import {
   postgrest,
   eqFilter,
   emptyPayload,
   insertEmptySync,
   SupabaseError,
-} from '../../lib/supabase.ts';
-import { mergePayload } from '../../lib/merge.ts';
-import type { Env } from '../../lib/env.ts';
+} from '../../../lib/supabase.ts';
+import { mergePayload } from '../../../lib/merge.ts';
+import type { Env } from '../../../lib/env.ts';
 
 export const onRequestPost = guard<{ request: Request; env: Env }>(async ({ request, env }) => {
   const { uid } = await requireUser(request, env);

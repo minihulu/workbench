@@ -8,10 +8,10 @@
  * 注意：PostgREST 查单行若不存在返回空数组 []（HTTP 200），不是 404，
  * 所以直接取 rows[0] ?? 缺省即可。
  */
-import { guard, jsonResponse } from '../../lib/json.ts';
-import { requireUser } from '../../lib/auth.ts';
-import { postgrest, eqFilter, SupabaseError } from '../../lib/supabase.ts';
-import type { Env } from '../../lib/env.ts';
+import { guard, jsonResponse } from '../../../lib/json.ts';
+import { requireUser } from '../../../lib/auth.ts';
+import { postgrest, eqFilter, SupabaseError } from '../../../lib/supabase.ts';
+import type { Env } from '../../../lib/env.ts';
 
 export const onRequestGet = guard<{ request: Request; env: Env }>(async ({ request, env }) => {
   const { uid } = await requireUser(request, env);

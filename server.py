@@ -592,6 +592,8 @@ class Handler(BaseHTTPRequestHandler):
             "version": VERSION,
             "pid": os.getpid(),
             "workdir": WORKDIR,
+            "storage_backend": STORAGE_BACKEND,
+            "store": "supabase" if STORE else "sqlite",
             "register_open": REGISTER_OPEN,
             "register_require_invite": REGISTER_REQUIRE_INVITE,
             "github_proxy": bool(GH_TOKEN or GH_PROXY_DICT),

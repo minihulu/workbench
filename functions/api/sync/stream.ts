@@ -13,10 +13,10 @@
  *
  * 这样「手机改了 → 电脑 1.5s 内自动刷新」的多端实时就能工作，且无状态、纯轮询 Supabase。
  */
-import { guard } from '../../lib/json.ts';
-import { requireUser } from '../../lib/auth.ts';
-import { postgrest, eqFilter, SupabaseError } from '../../lib/supabase.ts';
-import type { Env } from '../../lib/env.ts';
+import { guard } from '../../../lib/json.ts';
+import { requireUser } from '../../../lib/auth.ts';
+import { postgrest, eqFilter, SupabaseError } from '../../../lib/supabase.ts';
+import type { Env } from '../../../lib/env.ts';
 
 export const onRequestGet = guard<{ request: Request; env: Env }>(async ({ request, env }) => {
   const { uid } = await requireUser(request, env);
