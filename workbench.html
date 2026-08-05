@@ -3688,6 +3688,20 @@ async function pullSync(){
       diary = mergeRecords(diary, j.payload.diary);
       cogReads = mergeRecords(cogReads, j.payload.cog_reads);
       cogBooks = mergeRecords(cogBooks, j.payload.cog_books);
+      // 认知资产书籍：file 优先——云端有文件而本地无（或云端更新），用云端版本，避免空壳覆盖已上传文件
+      if(j.payload.cog_books && j.payload.cog_books.length){
+        const fmap = {};
+        j.payload.cog_books.forEach(b=>{ if(b && b.id && b.file) fmap[b.id]=b; });
+        if(Object.keys(fmap).length){
+          cogBooks = cogBooks.map(b=>{
+            const inc = fmap[b.id];
+            if(inc && (!b.file || (inc.updatedAt||0) >= (b.updatedAt||0))){
+              return Object.assign({}, b, { file: inc.file, updatedAt: Math.max(b.updatedAt||0, inc.updatedAt||0) });
+            }
+            return b;
+          });
+        }
+      }
       cogThoughts = mergeRecords(cogThoughts, j.payload.cog_thoughts);
       cogReviews = mergeRecords(cogReviews, j.payload.cog_reviews);
       cogExpr = mergeRecords(cogExpr, j.payload.cog_expr||[]);
