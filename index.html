@@ -2882,7 +2882,9 @@ function updateAccountUI(){
   $("#authForm").style.display = logged ? "none" : "block";
   $("#authLogin").style.display = logged ? "block" : "none";
   if(logged){
-    $("#auState").textContent = "已登录：" + apiUser;
+    const store = (wbCfg && (wbCfg.store || wbCfg.storage_backend));
+    const storeLabel = store === "supabase" ? "云端" : (store === "sqlite" ? "本地" : "");
+    $("#auState").textContent = "已登录：" + apiUser + (storeLabel ? (" · 存储：" + storeLabel) : "");
     $("#auSync").textContent = "最近同步：" + fmtSync(LS.get("wb_sync_at", 0));
   }
   $("#auMsg").textContent=""; $("#auMsg").className="au-msg";
@@ -2972,7 +2974,15 @@ $("#auSubmit").onclick = auSubmit;
 $("#auPass").addEventListener("keydown", e=>{ if(e.key==="Enter") auSubmit(); });
 $("#auUser").addEventListener("keydown", e=>{ if(e.key==="Enter") auSubmit(); });
 $("#auLogout").onclick = ()=>{ doLogout(); $("#authModal").classList.remove("open"); };
-$("#auNow").onclick = ()=>{ pushSync().then(j=>{ if(j&&j.ok){ toast("已同步 ☁"); } else { toast("同步失败"); } updateAccountUI(); }); };
+$("#auNow").onclick = ()=>{ pushSync().then(j=>{
+  if(j && j.ok){
+    // 先推后拉，保证「立即同步」双向：把本端改动上传，并把其他端改动拉下
+    return pullSync().finally(()=>{ toast("已同步 ☁"); updateAccountUI(); });
+  }
+  if(j && j.error){ toast("同步失败：" + j.error); }
+  else { toast("同步失败：连不上后端"); }
+  updateAccountUI();
+}); };
 
 /* ============ 初始化 ============ */
 fillCats();
