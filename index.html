@@ -3712,16 +3712,44 @@ async function pushSync(){
 }
 let _syncT=null;
 function scheduleSync(){ if(!apiToken) return; clearTimeout(_syncT); _syncT=setTimeout(()=>{ pushSync().then(updateAccountUI); }, 800); }
-let es=null;
-function startSyncStream(){
-  if(es || !apiToken) return;
+// 多端实时同步流：后端是 25s 超时的 SSE 长轮询；浏览器原生 EventSource 不允许自定义 header，
+// 但鉴权是 Bearer token，所以改用 fetch + ReadableStream + AbortController 自己接。
+// 25s 后端 timeout 后断流 → 等 1.5s 重连（与基线轮询节奏一致）。
+let esAbort=null, esTimer=null;
+async function streamSync(){
+  if(!apiToken) return;
+  esAbort = new AbortController();
   try{
-    es = new EventSource("/api/sync/stream");
-    es.onmessage = ()=>{ pullSync(); };          // 其他设备改动 → 即时拉取
-    es.onerror = ()=>{ if(!apiToken && es){ es.close(); es=null; } };
-  }catch(e){ es=null; }
+    const r = await fetch("/api/sync/stream", { headers: apiHeaders(), signal: esAbort.signal });
+    if(!r.ok || !r.body) throw new Error("HTTP "+r.status);
+    const reader = r.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    while(true){
+      const { value, done } = await reader.read();
+      if(done) break;
+      buf += dec.decode(value, {stream:true});
+      let idx;
+      while((idx = buf.indexOf("\n\n")) >= 0){
+        const chunk = buf.slice(0, idx); buf = buf.slice(idx+2);
+        const dataLine = chunk.split("\n").find(function(l){ return l.startsWith("data:"); });
+        if(!dataLine) continue;
+        const data = dataLine.slice(5).trim();
+        try{ const j = JSON.parse(data); if(j && j.type === "sync") pullSync(); }catch(e){}
+      }
+    }
+  }catch(_e){
+    // 401 / abort / 网络断：静默忽略，靠 push/pull 兜底；下次 setTimeout 再连
+  } finally {
+    esAbort = null;
+  }
+  if(apiToken) esTimer = setTimeout(streamSync, 1500);
 }
-function stopSyncStream(){ if(es){ es.close(); es=null; } }
+function startSyncStream(){ if(esAbort || esTimer || !apiToken) return; streamSync(); }
+function stopSyncStream(){
+  if(esAbort){ try{ esAbort.abort(); }catch(e){} esAbort=null; }
+  if(esTimer){ clearTimeout(esTimer); esTimer=null; }
+}
 async function doLogin(user, pass, reg, invite){
   const path = reg ? "/api/auth/signup" : "/api/auth/login";
   const body = {username:user, password:pass};
