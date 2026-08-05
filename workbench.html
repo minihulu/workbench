@@ -461,6 +461,21 @@
   .pdf-sel-btn{position:absolute; z-index:50; transform:translate(-50%,-130%); background:var(--brand); color:#fff; border:0; border-radius:8px; padding:6px 10px; font-size:12.5px; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.3); white-space:nowrap;}
   .pdf-sel-btn::after{content:""; position:absolute; left:50%; top:100%; transform:translateX(-50%); border:6px solid transparent; border-top-color:var(--brand);}
   .pdf-sel-btn:hover{filter:brightness(1.08);}
+  /* 选中文字浮条：高亮 / 批注 双按钮 */
+  .pdf-sel-row{position:absolute; z-index:50; transform:translate(-50%,-135%); display:flex; gap:6px; background:#fff; border-radius:10px; padding:5px; box-shadow:0 6px 18px rgba(0,0,0,.32);}
+  .pdf-sel-row::after{content:""; position:absolute; left:50%; top:100%; transform:translateX(-50%); border:6px solid transparent; border-top-color:#fff;}
+  .pdf-sel-row button{border:0; border-radius:7px; padding:6px 11px; font-size:12.5px; cursor:pointer; color:#fff; white-space:nowrap;}
+  .pdf-sel-row .b-hl{background:#f59e0b;}
+  .pdf-sel-row .b-hl:hover{filter:brightness(1.06);}
+  .pdf-sel-row .b-an{background:var(--brand);}
+  .pdf-sel-row .b-an:hover{filter:brightness(1.08);}
+  /* PDF 文字层高亮（划词高亮持久化） */
+  .pdf-page .textLayer span.hl{background:rgba(245,158,11,.42); border-radius:2px; cursor:pointer;}
+  .pdf-page .textLayer span.hl:hover{background:rgba(245,158,11,.7);}
+  /* 书架「继续阅读」角标 */
+  .book-resume{position:absolute; top:8px; right:8px; background:var(--brand); color:#fff; font-size:10.5px; font-weight:700; padding:3px 8px; border-radius:999px; box-shadow:0 2px 8px rgba(0,0,0,.25);}
+  /* 批注流「高亮」徽章 */
+  .anno .a-hl{display:inline-block; font-size:11px; color:#b45309; background:rgba(245,158,11,.16); border:1px solid rgba(245,158,11,.4); border-radius:6px; padding:1px 7px; margin:0 6px 2px 0;}
   .anno .a-page{display:inline-block; font-size:11px; color:var(--brand); background:var(--bg2); border:1px solid var(--line); border-radius:6px; padding:1px 7px; margin:0 6px 2px 0; cursor:pointer;}
   .anno .a-page:hover{background:var(--brand); color:#fff;}
 
@@ -2766,12 +2781,16 @@ function renderCogShelf(box, limit, preview){
     const prog = Math.max(0, Math.min(100, Number(b.progress||0)));
     const cnt = bookRecordCount(b);
     const cover = b.cover || "📕";
+    const canResume = !!(b.file && b.file.path && b.lastPage && b.lastPage>1);
+    const resume = canResume ? `<span class="book-resume">↪ 继续 · ${b.lastPage}p</span>` : '';
+    const sub = canResume ? `读到第 ${b.lastPage} 页` : `认知记录 ${cnt} 条`;
     return `<div class="book-card" data-book="${b.id}">
+      ${resume}
       <div class="book-cover">${esc(cover)}</div>
       <div class="book-title">${esc(b.title||"（未命名）")}</div>
       <div class="book-author">${esc(b.author||"未知作者")}</div>
       <div class="book-prog"><i style="width:${prog}%"></i></div>
-      <div class="book-meta"><span>阅读进度 <b>${prog}%</b></span><span>认知记录 <b>${cnt}</b> 条</span></div>
+      <div class="book-meta"><span>${sub}</span><span>认知记录 <b>${cnt}</b> 条</span></div>
     </div>`;
   }).join("");
   $$("#cogShelf .book-card, #cogBookList .book-card").forEach(el=> el.onclick=()=> openCogReadingSpace(el.dataset.book));
@@ -3334,7 +3353,7 @@ async function renderPdfBook(b, source){
   const data = source instanceof ArrayBuffer ? source : await fetch(source).then(r=>r.arrayBuffer());
   const doc = await lib.getDocument({ data }).promise;
   const total = doc.numPages;
-  const startPage = Math.min(Math.max(1, pdfJumpTo||1), total);
+  const startPage = Math.min(Math.max(1, b.lastPage||pdfJumpTo||1), total);
   pdfJumpTo = null;
   pdfCurrentPage = startPage;
   const pagesEl = $("#pdfPages");
@@ -3359,6 +3378,8 @@ async function renderPdfBook(b, source){
       pageDiv.appendChild(buildTextLayer(textContent, viewport));
     } catch(_) { /* 文字层失败不影响看图 */ }
     $("#pdfPageInfo").textContent = `第 ${n} / ${total} 页`;
+    applyHighlights(pagesEl, b.id, n);
+    saveBookProgress(b, n);
   }
 
   $("#pdfPrev").onclick = ()=>{ if(pdfCurrentPage>1) renderPage(pdfCurrentPage-1); };
@@ -3425,32 +3446,73 @@ function bindPdfSelection(pagesEl, b){
       const sel = window.getSelection();
       const text = sel ? sel.toString().trim() : "";
       removePdfSelBtn();
-      if(!text) return;
+      if(!text || text.length < 2) return;
       const range = sel.getRangeAt(0);
       const rect = range.getBoundingClientRect();
       if(rect.width===0 && rect.height===0) return;
-      const btn = document.createElement('button');
-      btn.className = 'pdf-sel-btn';
-      btn.textContent = '📝 写批注';
-      btn.style.left = (rect.left + rect.width/2) + 'px';
-      btn.style.top = rect.top + 'px';
-      document.body.appendChild(btn);
-      btn.onclick = ()=>{
-        removePdfSelBtn();
-        sel.removeAllRanges();
-        openCogAnno(null, b.id, text, pdfCurrentPage);
-      };
+      const row = document.createElement('div');
+      row.className = 'pdf-sel-row';
+      row.style.left = (rect.left + rect.width/2) + 'px';
+      row.style.top = rect.top + 'px';
+      const bh = document.createElement('button'); bh.className='b-hl'; bh.textContent='🖍 高亮';
+      const ba = document.createElement('button'); ba.className='b-an'; ba.textContent='📝 批注';
+      row.appendChild(bh); row.appendChild(ba);
+      document.body.appendChild(row);
+      bh.onclick = ()=>{ removePdfSelBtn(); sel.removeAllRanges(); addHighlight(b.id, text, pdfCurrentPage); applyHighlights(pagesEl, b.id, pdfCurrentPage); };
+      ba.onclick = ()=>{ removePdfSelBtn(); sel.removeAllRanges(); openCogAnno(null, b.id, text, pdfCurrentPage); };
     }, 10);
   };
   if(!_pdfSelBound){
     document.addEventListener('mousedown', (e)=>{
-      if(e.target && e.target.closest && e.target.closest('.pdf-sel-btn')) return;
+      if(e.target && e.target.closest && e.target.closest('.pdf-sel-row')) return;
       removePdfSelBtn();
     }, true);
     _pdfSelBound = true;
   }
 }
-function removePdfSelBtn(){ const ex = document.querySelector('.pdf-sel-btn'); if(ex) ex.remove(); }
+function removePdfSelBtn(){ const ex = document.querySelector('.pdf-sel-row'); if(ex) ex.remove(); }
+
+/* 划词高亮：选中文字一键加高亮（持久化为 highlight 型 annotation，可在批注流查看/升级为批注） */
+function addHighlight(bookId, text, page){
+  const rec = { id: uid(), kind:"annotation", book: bookTitleOf(bookId), sourceBookId:bookId, original:text, understanding:"", before:text, after:"", chapter:"", page, highlight:true, date:todayStr(), apply:[], doubt:"", duration:0, cat:COG_CATS[0], created:Date.now(), updatedAt:Date.now(), deviceId, deleted:false };
+  cogReads.push(rec);
+  saveCog(); renderCogHome(); renderCogAnno();
+  toast("已高亮");
+}
+function bookTitleOf(bookId){ const b = cogBooks.find(x=>x.id===bookId); return b ? (b.title||"") : ""; }
+
+/* 在该页文字层匹配高亮原文并加 .hl 类；点高亮打开编辑 */
+function applyHighlights(pagesEl, bookId, page){
+  const layer = pagesEl && pagesEl.querySelector('.textLayer');
+  if(!layer) return;
+  const spans = Array.prototype.filter.call(layer.childNodes, s=> s.nodeType===1 && s.textContent);
+  if(!spans.length) return;
+  const full = spans.map(s=>s.textContent).join('');
+  const hl = cogReads.filter(r=>!r.deleted && r.sourceBookId===bookId && r.page===page && r.highlight && r.original && r.original.trim());
+  if(!hl.length) return;
+  hl.forEach(r=>{
+    let idx = full.indexOf(r.original);
+    if(idx < 0) return;
+    const end = idx + r.original.length;
+    let acc = 0;
+    spans.forEach(s=>{
+      const s0 = acc, s1 = acc + s.textContent.length; acc = s1;
+      if(s1 <= idx || s0 >= end) return;   // 不重叠
+      s.classList.add('hl');
+      s.dataset.hlId = r.id;
+      s.onclick = (ev)=>{ ev.stopPropagation(); openCogAnno(r.id); };
+    });
+  });
+}
+
+/* 轻量保存阅读进度（多端续读）：不重渲染书架防闪烁，debounce 落盘+同步 */
+let _lastPageSaveT = null;
+function saveBookProgress(b, n){
+  if(!b) return;
+  b.lastPage = n; b.lastReadAt = Date.now(); b.updatedAt = Date.now();
+  clearTimeout(_lastPageSaveT);
+  _lastPageSaveT = setTimeout(()=>{ persistCog(); scheduleSync(); }, 400);
+}
 
 function saveCogProgress(){
   const b = cogBooks.find(x=>x.id===cogReadingBookId); if(!b) return;
@@ -3533,7 +3595,7 @@ function renderCogAnno(){
   if(!list.length){ box.innerHTML='<div class="empty">还没有读书思考。进入一本书的阅读空间，点「我的思考」开始沉淀。</div>'; return; }
   box.innerHTML = list.map(r=>`
     <div class="anno" data-anno="${r.id}">
-      <div class="a-book">《${esc(r.book||"？")}》${r.page?`<span class="a-page" data-page="${r.page}">第 ${r.page} 页 ›</span>`:""}</div>
+      <div class="a-book">${r.highlight?`<span class="a-hl">🖍 高亮</span>`:""}《${esc(r.book||"？")}》${r.page?`<span class="a-page" data-page="${r.page}">第 ${r.page} 页 ›</span>`:""}</div>
       ${r.original?`<div class="a-orig">“${esc(r.original)}”</div>`:""}
       <div class="a-under">${esc(r.understanding||"")}</div>
       <div class="a-acts">
