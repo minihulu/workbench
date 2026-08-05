@@ -29,6 +29,8 @@ _diag.txt
 .to-delete_*
 # 一次性探针脚本（连真实 Supabase 做隔离实验，本地用，不入库）
 .probe_*.py
+# esbuild 临时输出（用于校验 Function 导入深度）
+tmp/
 
 # 助手的本地工作记忆 —— 纯本地笔记，且含 Supabase 项目地址等内部信息，不入库
 .workbuddy/

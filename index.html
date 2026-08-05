@@ -419,6 +419,25 @@
   .excerpt .ex-acts{display:flex; gap:8px; margin-top:10px;}
   .excerpt .ex-time{font-size:11px; color:var(--txt2); margin-top:6px;}
 
+  /* ===== 文件上传（书模态框）+ 阅读文件渲染 ===== */
+  .file-drop{border:2px dashed var(--line); border-radius:12px; padding:18px; text-align:center; background:var(--bg2); cursor:pointer; transition:.15s; user-select:none;}
+  .file-drop:hover, .file-drop.drag{border-color:var(--brand); background:var(--card);}
+  .file-drop .fd-ic{font-size:32px; margin-bottom:4px;}
+  .file-drop .fd-t{font-size:13.5px; font-weight:600;}
+  .file-drop .fd-h{font-size:11.5px; color:var(--txt2); margin-top:4px;}
+  .file-present{display:flex; flex-direction:column; align-items:center; gap:4px; padding:6px 0;}
+  .file-present .fp-ic{font-size:28px;}
+  .file-present .fp-name{font-weight:700; font-size:13.5px; word-break:break-all; max-width:100%;}
+  .file-present .fp-meta{font-size:11.5px; color:var(--txt2);}
+  .file-present .fp-act{display:flex; gap:8px; margin-top:8px;}
+  .text-box{margin:10px 0; border-radius:12px; border:1px solid var(--line); background:var(--card); padding:14px; max-height:420px; overflow:auto;}
+  .text-box pre{margin:0; font-size:13px; line-height:1.7; white-space:pre-wrap; word-break:break-word; font-family:ui-monospace,monospace;}
+  .read-sediment{margin-top:22px; padding-top:18px; border-top:1px dashed var(--line);}
+  .read-sediment h3{font-size:15px; margin:0 0 10px; color:var(--brand);}
+  .read-sediment textarea{width:100%; min-height:64px; margin-bottom:8px;}
+  .read-status-row{display:flex; align-items:center; gap:10px; margin:8px 0;}
+  .read-status-row select{flex:1; max-width:200px;}
+
   /* ===== 我的思考 / 英语表达 列表项 ===== */
   .anno{position:relative; padding:13px; border-radius:13px; border:1px solid var(--line); background:var(--card); margin-bottom:10px; box-shadow:var(--shadow);}
   .anno .a-book{font-size:12px; color:var(--brand); font-weight:700; margin-bottom:6px;}
@@ -1163,30 +1182,33 @@
       <div class="modal" id="cogBookModal">
         <div class="modal-box card" style="width:min(560px,94vw);padding:22px;">
           <h2 style="margin-bottom:4px;">📚 书籍</h2>
-          <p class="sub" style="margin-bottom:14px;">加入或编辑一本书，沉淀它的核心观点与你的评价。</p>
+          <p class="sub" style="margin-bottom:14px;">加入一本书，把读到的变成想通的。</p>
           <div class="row">
             <div style="flex:1;"><label class="fld">书名</label><input id="cbTitle" placeholder="例如：《海龟交易法则》"></div>
             <div style="flex:0 0 120px;"><label class="fld">作者</label><input id="cbAuthor" placeholder="作者"></div>
           </div>
           <div class="row" style="margin-top:12px;">
             <div><label class="fld">分类</label><select id="cbCat"></select></div>
-            <div><label class="fld">阅读状态</label>
-              <select id="cbStatus">
-                <option>未开始</option><option>阅读中</option><option>已完成</option>
-              </select>
-            </div>
             <div style="flex:0 0 110px;"><label class="fld">封面 emoji</label><input id="cbCover" placeholder="📕" maxlength="4"></div>
           </div>
-          <div class="row" style="margin-top:12px;">
-            <div style="flex:1;"><label class="fld">阅读进度（%）</label><input type="number" id="cbProgress" min="0" max="100" placeholder="0"></div>
-            <div style="flex:1;"><label class="fld">PDF 链接（可选）</label><input id="cbPdf" placeholder="https://.../book.pdf"></div>
+          <label class="fld" style="margin-top:14px;">文件（PDF / TXT / MD，上传到云端、多端阅读）</label>
+          <div id="cbFileDrop" class="file-drop">
+            <div id="cbFileEmpty">
+              <div class="fd-ic">📎</div>
+              <div class="fd-t">点击选择或拖拽文件到这里</div>
+              <div class="fd-h">PDF 推荐；TXT / MD 也支持；最大 20MB</div>
+            </div>
+            <div id="cbFilePresent" class="file-present" style="display:none;">
+              <div class="fp-ic">📄</div>
+              <div class="fp-name" id="cbFileName"></div>
+              <div class="fp-meta" id="cbFileMeta"></div>
+              <div class="fp-act">
+                <button type="button" class="btn sm" id="cbFileReplace">重传</button>
+                <button type="button" class="btn sm ghost" id="cbFileRemove">移除</button>
+              </div>
+            </div>
+            <input type="file" id="cbFileInput" accept=".pdf,.txt,.md,application/pdf,text/plain,text/markdown,text/x-markdown" style="display:none;">
           </div>
-          <label class="fld" style="margin-top:12px;">最终总结</label>
-          <textarea id="cbSummary" placeholder="读完后的一句话总结"></textarea>
-          <label class="fld" style="margin-top:12px;">核心观点</label>
-          <textarea id="cbViews" placeholder="这本书最值得记住的几个观点"></textarea>
-          <label class="fld" style="margin-top:12px;">我的评价</label>
-          <textarea id="cbReview" placeholder="给这本书的评分 / 适用人群 / 读后感"></textarea>
           <div style="display:flex;gap:10px;margin-top:16px;justify-content:flex-end;align-items:center;">
             <button class="btn ghost" id="cogBookDelete" style="margin-right:auto;color:#c0392b;">🗑 删除</button>
             <button class="btn ghost" id="cogBookCancel">取消</button>
@@ -2784,36 +2806,168 @@ function renderCogBooks(){
   renderCogShelf($("#cogBookList"), 0, false);
 }
 let cogBookId=null;
+let cogBookPendingFile=null; // 暂存待上传的文件（点击「保存」时才上传）
+let cogBookRemovedFilePath=null; // 编辑模式下，标记要删除的旧文件
+function fmtBytes(n){
+  if(!n || n<1024) return (n||0)+"B";
+  if(n<1024*1024) return (n/1024).toFixed(1)+"KB";
+  return (n/1024/1024).toFixed(1)+"MB";
+}
+function renderCogBookFileUI(){
+  const empty = $("#cbFileEmpty"), present = $("#cbFilePresent");
+  // 优先级：暂存文件 > 现有文件
+  if(cogBookPendingFile){
+    empty.style.display="none"; present.style.display="";
+    $("#cbFileName").textContent = cogBookPendingFile.name;
+    $("#cbFileMeta").textContent = fmtBytes(cogBookPendingFile.size) + " · 待保存后上传";
+  } else {
+    const x = cogBookId ? cogBooks.find(b=>b.id===cogBookId) : null;
+    if(x && x.file && x.file.name && !cogBookRemovedFilePath){
+      empty.style.display="none"; present.style.display="";
+      $("#cbFileName").textContent = x.file.name;
+      $("#cbFileMeta").textContent = fmtBytes(x.file.size) + " · 已上传于 " + (x.file.uploadedAt?fmtDate(x.file.uploadedAt):"");
+    } else {
+      empty.style.display=""; present.style.display="none";
+    }
+  }
+}
+function pickFile(){ $("#cbFileInput").click(); }
+function setPendingFile(f){
+  if(!f) return;
+  const ok = ["application/pdf","text/plain","text/markdown","text/x-markdown"].includes(f.type)
+    || /\.pdf$/i.test(f.name) || /\.txt$/i.test(f.name) || /\.md$/i.test(f.name);
+  if(!ok){ toast("暂仅支持 PDF / TXT / MD"); return; }
+  if(f.size > 20*1024*1024){ toast("文件过大（20MB 上限）"); return; }
+  // 替换语义：若编辑的是已有书且原本已上传文件，标记旧文件待删除
+  const x = cogBookId ? cogBooks.find(b=>b.id===cogBookId) : null;
+  if(x && x.file && x.file.path && cogBookRemovedFilePath !== x.file.path){
+    cogBookRemovedFilePath = x.file.path;
+  }
+  cogBookPendingFile = f;
+  renderCogBookFileUI();
+}
 function openCogBook(id){
   const x = id ? cogBooks.find(b=>b.id===id) : null;
   cogBookId = id || null;
+  cogBookPendingFile = null; cogBookRemovedFilePath = null;
   $("#cbTitle").value = x ? (x.title||"") : "";
   $("#cbAuthor").value = x ? (x.author||"") : "";
   $("#cbCat").value = x ? (x.cat||COG_CATS[0]) : COG_CATS[0];
-  $("#cbStatus").value = x ? (x.status||"未开始") : "未开始";
   $("#cbCover").value = x ? (x.cover||"📕") : "📕";
-  $("#cbProgress").value = x ? (x.progress||0) : 0;
-  $("#cbPdf").value = x ? (x.pdfUrl||"") : "";
-  $("#cbSummary").value = x ? (x.summary||"") : "";
-  $("#cbViews").value = x ? (x.viewpoints||"") : "";
-  $("#cbReview").value = x ? (x.review||"") : "";
   $("#cogBookDelete").style.display = x ? "" : "none";
+  renderCogBookFileUI();
   $("#cogBookModal").classList.add("open");
+  // 绑定文件事件（一次性，初次绑定后由 on 重写，避免重复）
+  const inp = $("#cbFileInput");
+  inp.onchange = ()=>{ const f = inp.files && inp.files[0]; if(f) setPendingFile(f); inp.value=""; };
+  $("#cbFileDrop").onclick = (e)=>{ if(e.target.closest("button")) return; pickFile(); };
+  $("#cbFileReplace").onclick = (e)=>{ e.stopPropagation(); pickFile(); };
+  $("#cbFileRemove").onclick = (e)=>{
+    e.stopPropagation();
+    cogBookPendingFile = null;
+    const x2 = cogBookId ? cogBooks.find(b=>b.id===cogBookId) : null;
+    if(x2 && x2.file && x2.file.path) cogBookRemovedFilePath = x2.file.path;
+    renderCogBookFileUI();
+  };
+  // 拖拽
+  const drop = $("#cbFileDrop");
+  drop.ondragover = (e)=>{ e.preventDefault(); drop.classList.add("drag"); };
+  drop.ondragleave = ()=> drop.classList.remove("drag");
+  drop.ondrop = (e)=>{
+    e.preventDefault(); drop.classList.remove("drag");
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if(f) setPendingFile(f);
+  };
 }
-function saveCogBook(){
+async function saveCogBook(){
   const title = $("#cbTitle").value.trim();
   if(!title){ toast("请填写书名"); return; }
-  const rec = { title, author:$("#cbAuthor").value.trim(), cat:$("#cbCat").value, status:$("#cbStatus").value, cover:($("#cbCover").value.trim()||"📕"), progress:Math.max(0,Math.min(100,parseInt($("#cbProgress").value||"0",10)||0)), pdfUrl:$("#cbPdf").value.trim(), summary:$("#cbSummary").value.trim(), viewpoints:$("#cbViews").value.trim(), review:$("#cbReview").value.trim(), updatedAt:Date.now() };
-  if(cogBookId){ const x=cogBooks.find(b=>b.id===cogBookId); if(x) Object.assign(x, rec); toast("已更新"); }
-  else { cogBooks.push(Object.assign({id:uid(), created:Date.now(), deleted:false, deviceId}, rec)); toast("已添加"); }
-  saveCog(); closeCogBook(); renderCogHome(); renderCogBooks();
+  const rec = {
+    title,
+    author: $("#cbAuthor").value.trim(),
+    cat: $("#cbCat").value,
+    cover: ($("#cbCover").value.trim() || "📕"),
+  };
+  let isNew = !cogBookId;
+  if(cogBookId){
+    const x = cogBooks.find(b=>b.id===cogBookId);
+    if(x) Object.assign(x, rec, { updatedAt: Date.now() });
+  } else {
+    const newBook = Object.assign({id: uid(), created: Date.now(), updatedAt: Date.now(), deleted: false, deviceId}, rec);
+    cogBooks.push(newBook);
+    cogBookId = newBook.id;
+  }
+  saveCog();
+  closeCogBook();
+  renderCogHome(); renderCogBooks();
+  toast(isNew ? "已添加" : "已更新");
+
+  // 异步：上传新文件 / 删除旧文件
+  const pending = cogBookPendingFile;
+  const toRemove = cogBookRemovedFilePath;
+  cogBookPendingFile = null; cogBookRemovedFilePath = null;
+  if(toRemove){
+    deleteBookFile(toRemove).catch(()=>{}); // 静默
+  }
+  if(pending){
+    try {
+      const up = await uploadBookFile(cogBookId, pending);
+      const b = cogBooks.find(x=>x.id===cogBookId);
+      if(b){
+        b.file = up.file;
+        b.updatedAt = Date.now();
+        saveCog(); renderCogHome(); renderCogBooks();
+        toast("文件已上传");
+      }
+    } catch(e){
+      toast("文件上传失败：" + (e.message || e));
+    }
+  }
 }
-function delCogBook(){
+async function delCogBook(){
   if(!cogBookId) return;
+  const b = cogBooks.find(x=>x.id===cogBookId);
+  if(b && b.file && b.file.path){
+    deleteBookFile(b.file.path).catch(()=>{}); // 静默失败
+  }
   cogBooks = cogBooks.map(b=> b.id===cogBookId ? Object.assign({},b,{deleted:true, updatedAt:Date.now()}) : b);
   saveCog(); closeCogBook(); renderCogHome(); renderCogBooks(); toast("已删除");
 }
-function closeCogBook(){ $("#cogBookModal").classList.remove("open"); cogBookId=null; }
+function closeCogBook(){ $("#cogBookModal").classList.remove("open"); cogBookId=null; cogBookPendingFile=null; cogBookRemovedFilePath=null; }
+
+/* ---- 文件操作：上传 / 签名 / 删除 ---- */
+async function uploadBookFile(bookId, file){
+  const b64 = await new Promise((res, rej)=>{
+    const r = new FileReader();
+    r.onload = ()=> res(String(r.result||""));
+    r.onerror = ()=> rej(new Error("读取文件失败"));
+    r.readAsDataURL(file);
+  });
+  const r = await fetch("/api/books/upload", {
+    method: "POST",
+    headers: apiHeaders(),
+    body: JSON.stringify({ bookId, filename: file.name, contentType: file.type || "application/octet-stream", base64: b64 }),
+  });
+  const j = await r.json().catch(()=>({}));
+  if(!j.ok) throw new Error(j.error || j.detail || `HTTP ${r.status}`);
+  return j;
+}
+async function callBookSign(path){
+  const r = await fetch("/api/books/sign", {
+    method: "POST",
+    headers: apiHeaders(),
+    body: JSON.stringify({ path }),
+  });
+  return await r.json().catch(()=>({ok:false, error:"bad json"}));
+}
+async function deleteBookFile(path){
+  const r = await fetch("/api/books/delete", {
+    method: "POST",
+    headers: apiHeaders(),
+    body: JSON.stringify({ path }),
+  });
+  return await r.json().catch(()=>({ok:false}));
+}
 function openCogBookDetail(id){
   const b = cogBooks.find(x=>x.id===id); if(!b) return;
   const records = cogReads.filter(r=>!r.deleted && r.book===b.title).slice().sort((a,b2)=>(b2.date||"").localeCompare(a.date||""));
@@ -2964,6 +3118,7 @@ function renderCogReading(){
   const b = cogBooks.find(x=>x.id===cogReadingBookId); if(!b) return;
   const prog = Math.max(0, Math.min(100, Number(b.progress||0)));
   const cover = b.cover || "📕";
+  const status = b.status || "未开始";
   const excerpts = (b.excerpts||[]).filter(e=>!e.deleted).slice().sort((a,b2)=>(a.created||0)-(b2.created||0));
   const body = $("#cogReadingBody");
   body.innerHTML = `
@@ -2971,8 +3126,14 @@ function renderCogReading(){
       <div class="read-cover">${esc(cover)}</div>
       <div style="min-width:0;">
         <div class="read-title">${esc(b.title||"（未命名）")}</div>
-        <div class="read-author">${esc(b.author||"未知作者")} · ${bookStatusBadge(b.status)}</div>
+        <div class="read-author">${esc(b.author||"未知作者")}</div>
       </div>
+    </div>
+    <div class="read-status-row">
+      <span class="fld" style="margin:0;">阅读状态</span>
+      <select id="crStatus">
+        <option>未开始</option><option>阅读中</option><option>已完成</option>
+      </select>
     </div>
     <div class="read-prog-row">
       <input type="range" min="0" max="100" id="crProg" value="${prog}">
@@ -2982,13 +3143,26 @@ function renderCogReading(){
     <div class="read-pos">
       <input id="crPos" placeholder="阅读位置，如：第 52 页 / Chapter 3" value="${esc(b.lastPosition||"")}">
     </div>
-    ${b.pdfUrl ? `<div class="pdf-box"><iframe src="${esc(b.pdfUrl)}" allow="fullscreen"></iframe></div>
-      <div class="cog-hint">PDF 由浏览器直接打开，翻页后把当前位置填到上方「阅读位置」。</div>` : ""}
+    <div id="crFileBox" style="margin-top:8px;">
+      <div class="cog-hint">正在加载文件...</div>
+    </div>
     <div class="read-pos" style="margin-top:12px;">
       <textarea id="crExcerpt" placeholder="粘贴你读到的片段，稍后写思考"></textarea>
       <button class="btn sm" id="crExcerptAdd">＋ 添加片段</button>
     </div>
-    <div id="cogExcerptList" style="margin-top:10px;"></div>`;
+    <div id="cogExcerptList" style="margin-top:10px;"></div>
+    <div class="read-sediment">
+      <h3>🌱 读后沉淀</h3>
+      <label class="fld">最终总结</label>
+      <textarea id="crSummary" placeholder="读完后的一句话总结">${esc(b.summary||"")}</textarea>
+      <label class="fld" style="margin-top:8px;">核心观点</label>
+      <textarea id="crViews" placeholder="这本书最值得记住的几个观点">${esc(b.viewpoints||"")}</textarea>
+      <label class="fld" style="margin-top:8px;">我的评价</label>
+      <textarea id="crReview" placeholder="给这本书的评分 / 适用人群 / 读后感">${esc(b.review||"")}</textarea>
+      <button class="btn sm" id="crSedimentSave" style="margin-top:6px;">💾 保存沉淀</button>
+    </div>`;
+  // 状态
+  $("#crStatus").value = status;
   // 进度
   const progEl = $("#crProg"), progVal = $("#crProgVal");
   progEl.oninput = ()=>{ progVal.textContent = progEl.value + "%"; };
@@ -2996,6 +3170,10 @@ function renderCogReading(){
   $("#crProgSave").onclick = saveCogProgress;
   // 位置
   $("#crPos").onblur = saveCogProgress;
+  // 状态
+  $("#crStatus").onchange = saveCogProgress;
+  // 沉淀
+  $("#crSedimentSave").onclick = saveCogSediment;
   // 片段
   $("#crExcerptAdd").onclick = ()=>{
     const t = $("#crExcerpt").value.trim(); if(!t){ toast("先粘贴读到的内容"); return; }
@@ -3030,14 +3208,54 @@ function renderCogReading(){
       };
     });
   }
+  // 加载文件
+  renderCogReadingFile();
+}
+async function renderCogReadingFile(){
+  const b = cogBooks.find(x=>x.id===cogReadingBookId);
+  const box = $("#crFileBox"); if(!box) return;
+  if(!b || !b.file || !b.file.path){
+    box.innerHTML = '<div class="empty">📎 本书暂无文件。点右上角「编辑书籍」上传 PDF / TXT / MD。</div>';
+    return;
+  }
+  box.innerHTML = '<div class="cog-hint">正在加载文件...</div>';
+  try {
+    const j = await callBookSign(b.file.path);
+    if(!j.ok) throw new Error(j.detail || j.error || "签名失败");
+    const url = j.url;
+    const type = (b.file.type || "").toLowerCase();
+    if(type === "application/pdf" || /\.pdf$/i.test(b.file.name||"")){
+      box.innerHTML = `<div class="pdf-box"><iframe src="${esc(url)}" allow="fullscreen"></iframe></div>
+        <div class="cog-hint">PDF 由浏览器直接打开，翻页后把当前位置填到上方「阅读位置」。</div>`;
+    } else if(type.startsWith("text/") || /\.(txt|md)$/i.test(b.file.name||"")){
+      const r = await fetch(url);
+      const text = await r.text();
+      box.innerHTML = `<div class="text-box"><pre>${esc(text)}</pre></div>
+        <div class="cog-hint">文本已加载。</div>`;
+    } else {
+      box.innerHTML = `<div class="empty">不支持在线阅读的文件类型：${esc(type)}</div>`;
+    }
+  } catch(e){
+    box.innerHTML = `<div class="empty">文件加载失败：${esc(String(e.message || e))}</div>`;
+  }
 }
 function saveCogProgress(){
   const b = cogBooks.find(x=>x.id===cogReadingBookId); if(!b) return;
   const p = Math.max(0, Math.min(100, parseInt($("#crProg")?.value||b.progress||0,10)||0));
   const pos = $("#crPos") ? $("#crPos").value.trim() : "";
-  b.progress = p; b.lastPosition = pos; b.updatedAt = Date.now();
+  const status = $("#crStatus") ? $("#crStatus").value : (b.status||"未开始");
+  b.progress = p; b.lastPosition = pos; b.status = status; b.updatedAt = Date.now();
   saveCog(); renderCogHome();
   if(cogScreen===5) $("#crProgVal") && ($("#crProgVal").textContent = p + "%");
+}
+function saveCogSediment(){
+  const b = cogBooks.find(x=>x.id===cogReadingBookId); if(!b) return;
+  b.summary = $("#crSummary").value.trim();
+  b.viewpoints = $("#crViews").value.trim();
+  b.review = $("#crReview").value.trim();
+  b.updatedAt = Date.now();
+  saveCog(); renderCogHome();
+  toast("已保存沉淀");
 }
 
 /* ---- 阅读批注：我的思考（弹窗） ---- */
