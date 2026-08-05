@@ -446,10 +446,29 @@
   .read-file-source .read-file-acts{display:flex; gap:8px; flex-shrink:0;}
 
   /* ===== PDF.js 阅读器（小说式：内联渲染 + 选中写批注） ===== */
-  .pdf-reader{margin:10px 0; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--card);}
   .pdf-toolbar{display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding:8px 10px; background:var(--bg2); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5;}
   .pdf-toolbar button{font-size:12.5px; padding:5px 9px;}
   .pdf-toolbar input[type=number]{width:56px; padding:5px 6px; font-size:12.5px;}
+  /* 左侧目录导航栏（PDF outline） */
+  .pdf-reader{display:flex; align-items:stretch; margin:10px 0; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--card); min-height:60vh;}
+  .pdf-main{flex:1; min-width:0; display:flex; flex-direction:column;}
+  .pdf-toc{width:240px; flex:0 0 240px; background:var(--bg2); border-right:1px solid var(--line); display:flex; flex-direction:column; max-height:78vh;}
+  .pdf-toc.hidden{display:none;}
+  .pdf-toc-head{padding:10px 12px; font-weight:600; font-size:13px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--bg2); z-index:2;}
+  .pdf-toc-list{flex:1; overflow-y:auto; padding:6px 4px 16px;}
+  .toc-item{font-size:13px;}
+  .toc-title{display:block; padding:6px 10px; border-radius:6px; cursor:pointer; color:var(--txt); line-height:1.4; word-break:break-word;}
+  .toc-title:hover{background:var(--hl);}
+  .toc-title.active{background:var(--brand); color:#fff;}
+  .toc-children{padding-left:10px; border-left:1px solid var(--line); margin-left:10px; margin-top:2px;}
+  .toc-page{float:right; color:var(--txt2); font-size:11px; margin-left:10px;}
+  .toc-title.active .toc-page{color:rgba(255,255,255,.8);}
+  .toc-empty{padding:14px 12px; color:var(--txt2); font-size:12.5px;}
+  @media (max-width: 760px){
+    .pdf-reader{position:relative;}
+    .pdf-toc{display:none; position:absolute; left:0; top:0; bottom:0; z-index:30; width:80%; max-width:300px; box-shadow:3px 0 16px rgba(0,0,0,.25);}
+    .pdf-toc.show{display:flex;}
+  }
   .pdf-pageinfo{font-size:12.5px; color:var(--txt2); margin:0 4px; white-space:nowrap;}
   .pdf-zoom{font-size:12px; color:var(--txt2); margin-left:6px;}
   .pdf-pages{padding:14px; background:#525659; max-height:78vh; overflow:auto; text-align:center;}
@@ -3335,20 +3354,27 @@ async function renderPdfBook(b, source){
   const lib = await ensurePdfJs();
   const box = $("#crFileBox");
   box.innerHTML = `<div class="pdf-reader">
-    <div class="pdf-toolbar">
-      <button id="pdfPrev" class="btn sm ghost">‹ 上一页</button>
-      <span class="pdf-pageinfo" id="pdfPageInfo">加载中…</span>
-      <button id="pdfNext" class="btn sm ghost">下一页 ›</button>
-      <input id="pdfJump" type="number" min="1" placeholder="页">
-      <button id="pdfJumpBtn" class="btn sm">跳转</button>
-      <span class="pdf-zoom">缩放</span>
-      <button id="pdfZoomOut" class="btn sm ghost">－</button>
-      <span class="pdf-pageinfo" id="pdfZoomVal">140%</span>
-      <button id="pdfZoomIn" class="btn sm ghost">＋</button>
-      <span style="flex:1;"></span>
-      <button id="pdfPageAnno" class="btn sm" title="对当前这一页写批注">📝 对本页写批注</button>
+    <aside class="pdf-toc" id="pdfToc">
+      <div class="pdf-toc-head">📑 目录</div>
+      <div class="pdf-toc-list" id="pdfTocList"><div class="toc-empty">加载中…</div></div>
+    </aside>
+    <div class="pdf-main">
+      <div class="pdf-toolbar">
+        <button id="pdfTocToggle" class="btn sm ghost" title="显示/隐藏目录">📑 目录</button>
+        <button id="pdfPrev" class="btn sm ghost">‹ 上一页</button>
+        <span class="pdf-pageinfo" id="pdfPageInfo">加载中…</span>
+        <button id="pdfNext" class="btn sm ghost">下一页 ›</button>
+        <input id="pdfJump" type="number" min="1" placeholder="页">
+        <button id="pdfJumpBtn" class="btn sm">跳转</button>
+        <span class="pdf-zoom">缩放</span>
+        <button id="pdfZoomOut" class="btn sm ghost">－</button>
+        <span class="pdf-pageinfo" id="pdfZoomVal">140%</span>
+        <button id="pdfZoomIn" class="btn sm ghost">＋</button>
+        <span style="flex:1;"></span>
+        <button id="pdfPageAnno" class="btn sm" title="对当前这一页写批注">📝 对本页写批注</button>
+      </div>
+      <div class="pdf-pages" id="pdfPages"><div class="cog-hint">正在渲染 PDF…</div></div>
     </div>
-    <div class="pdf-pages" id="pdfPages"><div class="cog-hint">正在渲染 PDF…</div></div>
   </div>`;
   const data = source instanceof ArrayBuffer ? source : await fetch(source).then(r=>r.arrayBuffer());
   const doc = await lib.getDocument({ data }).promise;
@@ -3378,12 +3404,19 @@ async function renderPdfBook(b, source){
       pageDiv.appendChild(buildTextLayer(textContent, viewport));
     } catch(_) { /* 文字层失败不影响看图 */ }
     $("#pdfPageInfo").textContent = `第 ${n} / ${total} 页`;
+    highlightTocCurrent(n);
     applyHighlights(pagesEl, b.id, n);
     saveBookProgress(b, n);
   }
 
   $("#pdfPrev").onclick = ()=>{ if(pdfCurrentPage>1) renderPage(pdfCurrentPage-1); };
   $("#pdfNext").onclick = ()=>{ if(pdfCurrentPage<total) renderPage(pdfCurrentPage+1); };
+  $("#pdfTocToggle").onclick = ()=>{
+    const toc = $("#pdfToc"); if(!toc) return;
+    const mobile = window.matchMedia("(max-width:760px)").matches;
+    if(mobile){ toc.classList.toggle('show'); toc.classList.remove('hidden'); }
+    else { toc.classList.toggle('hidden'); toc.classList.remove('show'); }
+  };
   $("#pdfJumpBtn").onclick = ()=>{ const n=parseInt($("#pdfJump").value||"0",10); if(n>=1&&n<=total) renderPage(n); };
   $("#pdfZoomIn").onclick = ()=>{ scale=Math.min(3, scale+0.2); $("#pdfZoomVal").textContent=Math.round(scale*100)+'%'; renderPage(pdfCurrentPage); };
   $("#pdfZoomOut").onclick = ()=>{ scale=Math.max(0.6, scale-0.2); $("#pdfZoomVal").textContent=Math.round(scale*100)+'%'; renderPage(pdfCurrentPage); };
@@ -3392,8 +3425,72 @@ async function renderPdfBook(b, source){
     openCogAnno(null, b.id, '', pdfCurrentPage);
     toast('已为第 '+pdfCurrentPage+' 页打开批注');
   };
+  loadPdfOutline(doc, renderPage);
   await renderPage(startPage);
   bindPdfSelection(pagesEl, b);
+}
+
+/* PDF 大纲（目录导航栏）：解析 outline 点击跳页 */
+function loadPdfOutline(doc, renderPage){
+  const list = $("#pdfTocList"); if(!list) return;
+  try {
+    Promise.resolve(doc.getOutline()).then(outline=>{
+      if(!outline || !outline.length){ list.innerHTML = '<div class="toc-empty">📭 本书没有内置目录</div>'; return; }
+      list.innerHTML = '';
+      list.appendChild(buildTocDom(outline, doc, renderPage));
+    }).catch(()=>{ list.innerHTML = '<div class="toc-empty">📭 本书没有内置目录</div>'; });
+  } catch(e){ list.innerHTML = '<div class="toc-empty">目录加载失败</div>'; }
+}
+function buildTocDom(items, doc, renderPage){
+  const wrap = document.createElement('div');
+  (items||[]).forEach(item=>{
+    const itemEl = document.createElement('div'); itemEl.className = 'toc-item';
+    const titleEl = document.createElement('span'); titleEl.className = 'toc-title';
+    const pageBadge = document.createElement('span'); pageBadge.className = 'toc-page';
+    titleEl.appendChild(pageBadge);
+    titleEl.appendChild(document.createTextNode(item.title || '(无标题)'));
+    itemEl.appendChild(titleEl);
+    attachOutlineDest(doc, item, titleEl, pageBadge);
+    titleEl.onclick = ()=>{
+      const go = (n)=>{
+        if(n>=1 && n<=doc.numPages){ renderPage(n); }
+        if(window.matchMedia("(max-width:760px)").matches){ const toc=$("#pdfToc"); if(toc) toc.classList.remove('show'); }
+      };
+      if(item._page){ go(item._page); return; }
+      if(!item.dest){ return; }
+      Promise.resolve(doc.getDestination(item.dest)).then(d=>{
+        if(!d || !d.length) return;
+        return doc.getPageIndex(d[0]);
+      }).then(idx=>{ if(idx!=null) go(idx+1); else toast('目录跳转失败'); }).catch(()=> toast('目录跳转失败'));
+    };
+    if(item.items && item.items.length){
+      const sub = buildTocDom(item.items, doc, renderPage);
+      sub.classList.add('toc-children');
+      itemEl.appendChild(sub);
+    }
+    wrap.appendChild(itemEl);
+  });
+  return wrap;
+}
+function attachOutlineDest(doc, item, titleEl, pageBadge){
+  if(!item.dest) return;
+  Promise.resolve(doc.getDestination(item.dest)).then(d=>{
+    if(!d || !d.length) return;
+    return doc.getPageIndex(d[0]);
+  }).then(idx=>{
+    if(idx == null) return;
+    const n = idx + 1;
+    item._page = n;
+    titleEl.dataset.page = n;
+    pageBadge.textContent = n;
+  }).catch(()=>{});
+}
+function highlightTocCurrent(n){
+  const titles = document.querySelectorAll('#pdfTocList .toc-title[data-page]');
+  titles.forEach(t=>{
+    const p = parseInt(t.dataset.page || '0', 10);
+    if(p === n) t.classList.add('active'); else t.classList.remove('active');
+  });
 }
 
 /* 手动构建可选中的文字层（v4 的 renderTextLayer 已移入 viewer 模块，这里自己实现，零依赖）。 */
