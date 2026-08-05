@@ -3441,6 +3441,20 @@ function loadPdfOutline(doc, renderPage){
     }).catch(()=>{ list.innerHTML = '<div class="toc-empty">📭 本书没有内置目录</div>'; });
   } catch(e){ list.innerHTML = '<div class="toc-empty">目录加载失败</div>'; }
 }
+// 健壮解析大纲条目的目标页码：兼容 dest 为 数组[ref,...] / Ref 对象 / 命名字符串 三种形态
+async function resolveOutlinePage(doc, dest){
+  if(!dest) return null;
+  let explicit = dest;
+  if(typeof dest === 'string'){
+    // 命名目标：getDestination 解析成 explicit 数组
+    try { explicit = await doc.getDestination(dest); } catch(e){ explicit = null; }
+  }
+  if(!explicit) return null;
+  const ref = Array.isArray(explicit) ? explicit[0] : explicit;
+  if(!ref || typeof ref !== 'object') return null;
+  try { const idx = await doc.getPageIndex(ref); return idx==null ? null : idx+1; }
+  catch(e){ return null; }
+}
 function buildTocDom(items, doc, renderPage){
   const wrap = document.createElement('div');
   (items||[]).forEach(item=>{
@@ -3451,17 +3465,15 @@ function buildTocDom(items, doc, renderPage){
     titleEl.appendChild(document.createTextNode(item.title || '(无标题)'));
     itemEl.appendChild(titleEl);
     attachOutlineDest(doc, item, titleEl, pageBadge);
-    titleEl.onclick = ()=>{
+    titleEl.onclick = async ()=>{
       const go = (n)=>{
         if(n>=1 && n<=doc.numPages){ renderPage(n); }
         if(window.matchMedia("(max-width:760px)").matches){ const toc=$("#pdfToc"); if(toc) toc.classList.remove('show'); }
       };
       if(item._page){ go(item._page); return; }
       if(!item.dest){ return; }
-      Promise.resolve(doc.getDestination(item.dest)).then(d=>{
-        if(!d || !d.length) return;
-        return doc.getPageIndex(d[0]);
-      }).then(idx=>{ if(idx!=null) go(idx+1); else toast('目录跳转失败'); }).catch(()=> toast('目录跳转失败'));
+      const n = await resolveOutlinePage(doc, item.dest);
+      if(n) go(n); else { console.warn('目录跳转失败，dest=', item.dest); toast('目录跳转失败'); }
     };
     if(item.items && item.items.length){
       const sub = buildTocDom(item.items, doc, renderPage);
@@ -3473,17 +3485,12 @@ function buildTocDom(items, doc, renderPage){
   return wrap;
 }
 function attachOutlineDest(doc, item, titleEl, pageBadge){
-  if(!item.dest) return;
-  Promise.resolve(doc.getDestination(item.dest)).then(d=>{
-    if(!d || !d.length) return;
-    return doc.getPageIndex(d[0]);
-  }).then(idx=>{
-    if(idx == null) return;
-    const n = idx + 1;
+  resolveOutlinePage(doc, item.dest).then(n=>{
+    if(!n) return;
     item._page = n;
     titleEl.dataset.page = n;
     pageBadge.textContent = n;
-  }).catch(()=>{});
+  });
 }
 function highlightTocCurrent(n){
   const titles = document.querySelectorAll('#pdfTocList .toc-title[data-page]');
