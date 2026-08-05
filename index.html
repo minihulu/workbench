@@ -491,6 +491,8 @@
   /* PDF 文字层高亮（划词高亮持久化） */
   .pdf-page .textLayer span.hl{background:rgba(245,158,11,.42); border-radius:2px; cursor:pointer;}
   .pdf-page .textLayer span.hl:hover{background:rgba(245,158,11,.7);}
+  .pdf-page-slot{display:block; margin:0 auto 14px; background:#fff; box-shadow:0 2px 12px rgba(0,0,0,.35); position:relative; min-height:70vh;}
+  .pdf-pages.scroll{text-align:center;}
   /* 书架「继续阅读」角标 */
   .book-resume{position:absolute; top:8px; right:8px; background:var(--brand); color:#fff; font-size:10.5px; font-weight:700; padding:3px 8px; border-radius:999px; box-shadow:0 2px 8px rgba(0,0,0,.25);}
   /* 批注流「高亮」徽章 */
@@ -3310,6 +3312,7 @@ async function renderCogReadingFile(){
     const url = j.url;
     const type = (b.file.type || "").toLowerCase();
     if(type === "application/pdf" || /\.pdf$/i.test(b.file.name||"")){
+      pdfDoc = null; pdfRendered.clear(); pdfPageDivs = {};   // 切换书籍时重置解析缓存，避免串书
       await renderPdfBook(b, url);
       setFileState('☁️ 云端文件：'+(b.file.name||''), 'cloud');
     } else if(type.startsWith("text/") || /\.(txt|md)$/i.test(b.file.name||"")){
@@ -3345,13 +3348,22 @@ async function ensurePdfJs(){
   }
   return _pdfjsPromise;
 }
+/* === PDF 阅读器共享状态（单页 / 滚动双模式 + 本地缓存） === */
+let pdfDoc=null, pdfTotal=0, pdfScale=1.4;
+let pdfBook=null, pdfPagesEl=null, pdfSourceRaw=null;
+let pdfMode='page', pdfPageDivs={}, pdfRendered=new Set(), pdfIO=null;
+let _pdfCacheDB=null;
+function openPdfCacheDB(){ return new Promise((res)=>{ try{ if(_pdfCacheDB) return res(_pdfCacheDB); const r=indexedDB.open('wb_pdf_cache',1); r.onupgradeneeded=()=>{ try{ r.result.createObjectStore('pdfs'); }catch(_){} }; r.onsuccess=()=>{ _pdfCacheDB=r.result; res(r.result); }; r.onerror=()=>{ res(null); }; }catch(e){ res(null); } }); }
+async function pdfCacheGet(bookId){ try{ const db=await openPdfCacheDB(); if(!db) return null; return await new Promise((res)=>{ const tx=db.transaction('pdfs','readonly'); const rq=tx.objectStore('pdfs').get(bookId); rq.onsuccess=()=>res(rq.result||null); rq.onerror=()=>res(null); }); }catch(e){ return null; } }
+async function pdfCachePut(bookId,buf){ try{ const db=await openPdfCacheDB(); if(!db) return; await new Promise((res)=>{ const tx=db.transaction('pdfs','readwrite'); tx.objectStore('pdfs').put(buf,bookId); tx.oncomplete=()=>res(); tx.onerror=()=>res(); }); }catch(e){} }
+async function refreshPdfCache(bookId, source){ try{ if(typeof source!=='string') return; const buf=await fetch(source).then(r=>r.arrayBuffer()); if(buf && buf.byteLength) await pdfCachePut(bookId, buf); }catch(e){} }
 let pdfCurrentPage = 1;
 let pdfJumpTo = null;     // 从批注列表跳转指定页
 let _pdfSelBound = false;
 
 async function renderPdfBook(b, source){
-  // source 可以是 URL（云端）或 ArrayBuffer（本地）。统一成 arrayBuffer 给 getDocument。
   const lib = await ensurePdfJs();
+  pdfBook = b; pdfSourceRaw = source;
   const box = $("#crFileBox");
   box.innerHTML = `<div class="pdf-reader">
     <aside class="pdf-toc" id="pdfToc">
@@ -3366,78 +3378,193 @@ async function renderPdfBook(b, source){
         <button id="pdfNext" class="btn sm ghost">下一页 ›</button>
         <input id="pdfJump" type="number" min="1" placeholder="页">
         <button id="pdfJumpBtn" class="btn sm">跳转</button>
+        <button id="pdfModeBtn" class="btn sm ghost" title="切换翻页 / 滚动">${pdfMode==='scroll'?'📄 单页':'📜 滚动'}</button>
         <span class="pdf-zoom">缩放</span>
         <button id="pdfZoomOut" class="btn sm ghost">－</button>
-        <span class="pdf-pageinfo" id="pdfZoomVal">140%</span>
+        <span class="pdf-pageinfo" id="pdfZoomVal">${Math.round(pdfScale*100)}%</span>
         <button id="pdfZoomIn" class="btn sm ghost">＋</button>
         <span style="flex:1;"></span>
         <button id="pdfPageAnno" class="btn sm" title="对当前这一页写批注">📝 对本页写批注</button>
       </div>
-      <div class="pdf-pages" id="pdfPages"><div class="cog-hint">正在渲染 PDF…</div></div>
+      <div class="pdf-pages${pdfMode==='scroll'?' scroll':''}" id="pdfPages"><div class="cog-hint">正在渲染 PDF…</div></div>
     </div>
   </div>`;
-  const data = source instanceof ArrayBuffer ? source : await fetch(source).then(r=>r.arrayBuffer());
-  const doc = await lib.getDocument({ data }).promise;
-  const total = doc.numPages;
-  const startPage = Math.min(Math.max(1, b.lastPage||pdfJumpTo||1), total);
+  // PDF 数据：优先本地 IndexedDB 缓存（秒开），未命中再下载并写缓存（后台静默刷新）
+  let data;
+  if(!pdfDoc){
+    const cached = b && b.id ? await pdfCacheGet(b.id) : null;
+    if(cached && cached.byteLength){
+      data = cached;
+      refreshPdfCache(b.id, source);
+    } else {
+      data = source instanceof ArrayBuffer ? source : await fetch(source).then(r=>r.arrayBuffer());
+      if(b && b.id && data && data.byteLength) await pdfCachePut(b.id, data);
+    }
+    pdfDoc = await lib.getDocument({ data }).promise;
+  }
+  const doc = pdfDoc;
+  const total = doc.numPages; pdfTotal = total;
+  const startPage = Math.min(Math.max(1, (b&&b.lastPage)||pdfJumpTo||1), total);
   pdfJumpTo = null;
   pdfCurrentPage = startPage;
   const pagesEl = $("#pdfPages");
-  let scale = 1.4;
+  pdfPagesEl = pagesEl;
+  bindPdfToolbar(doc, total, pagesEl, b);
+  loadPdfOutline(doc);
+  if(pdfMode === 'scroll'){
+    layoutScroll(doc, total, pagesEl, b, startPage);
+  } else {
+    await renderPage(doc, total, pagesEl, b, startPage);
+  }
+  bindPdfSelection(pagesEl, b);
+}
 
-  async function renderPage(n){
-    pdfCurrentPage = n;
-    pagesEl.innerHTML = '<div class="cog-hint">渲染第 '+n+' 页…</div>';
+/* === PDF 工具栏（单页 / 滚动通用） === */
+function bindPdfToolbar(doc, total, pagesEl, b){
+  $("#pdfPrev").onclick = ()=>{
+    if(pdfMode==='scroll'){ const s=pdfPageDivs[Math.max(1,pdfCurrentPage-1)]; if(s) s.scrollIntoView({behavior:'smooth'}); }
+    else { if(pdfCurrentPage>1) renderPage(doc,total,pagesEl,b,pdfCurrentPage-1); }
+  };
+  $("#pdfNext").onclick = ()=>{
+    if(pdfMode==='scroll'){ const s=pdfPageDivs[Math.min(total,pdfCurrentPage+1)]; if(s) s.scrollIntoView({behavior:'smooth'}); }
+    else { if(pdfCurrentPage<total) renderPage(doc,total,pagesEl,b,pdfCurrentPage+1); }
+  };
+  $("#pdfTocToggle").onclick = ()=>{
+    const toc=$("#pdfToc"); if(!toc) return;
+    const mobile=window.matchMedia("(max-width:760px)").matches;
+    if(mobile){ toc.classList.toggle('show'); toc.classList.remove('hidden'); }
+    else { toc.classList.toggle('hidden'); toc.classList.remove('show'); }
+  };
+  $("#pdfJumpBtn").onclick = ()=>{ const n=parseInt($("#pdfJump").value||"0",10); if(n>=1&&n<=total) pdfGoToPage(doc,total,pagesEl,b,n); };
+  $("#pdfModeBtn").onclick = ()=>{
+    pdfMode = pdfMode==='page' ? 'scroll' : 'page';
+    $("#pdfModeBtn").textContent = pdfMode==='page' ? '📜 滚动' : '📄 单页';
+    if(pdfMode==='scroll') layoutScroll(doc,total,pagesEl,b,pdfCurrentPage);
+    else renderPage(doc,total,pagesEl,b,pdfCurrentPage);
+  };
+  $("#pdfZoomIn").onclick = ()=>{ const s=Math.min(3, pdfScale+0.2); onPdfZoom(doc,total,pagesEl,b,s); };
+  $("#pdfZoomOut").onclick = ()=>{ const s=Math.max(0.6, pdfScale-0.2); onPdfZoom(doc,total,pagesEl,b,s); };
+  $("#pdfZoomVal").textContent = Math.round(pdfScale*100)+'%';
+  $("#pdfPageAnno").onclick = ()=>{ openCogAnno(null, b.id, '', pdfCurrentPage); toast('已为第 '+pdfCurrentPage+' 页打开批注'); };
+}
+function onPdfZoom(doc, total, pagesEl, b, s){
+  pdfScale = s;
+  $("#pdfZoomVal").textContent = Math.round(s*100)+'%';
+  if(pdfMode==='scroll'){
+    const done=[...pdfRendered]; pdfRendered.clear();
+    done.forEach(i=> renderScrollPage(doc,total,pagesEl,b,i));
+  } else {
+    renderPage(doc,total,pagesEl,b,pdfCurrentPage);
+  }
+}
+function pdfGoToPage(doc, total, pagesEl, b, n){
+  if(n<1||n>total) return;
+  if(pdfMode==='scroll'){
+    const s=pdfPageDivs[n]; if(s) s.scrollIntoView({behavior:'smooth'});
+    pdfCurrentPage=n; updatePdfPageInfo(total); highlightTocCurrent(n); saveBookProgress(b,n);
+  } else {
+    renderPage(doc,total,pagesEl,b,n);
+  }
+}
+function updatePdfPageInfo(total){ const el=$("#pdfPageInfo"); if(el) el.textContent = `第 ${pdfCurrentPage} / ${total} 页`; }
+async function renderPage(doc, total, pagesEl, b, n){
+  pdfCurrentPage = n;
+  // 单页模式统一清理滚动模式遗留状态：容器类名 / 懒渲染观察器 / 滚动监听 / 页槽缓存
+  pagesEl.classList.remove('scroll');
+  if(pdfIO){ try{ pdfIO.disconnect(); }catch(_){} pdfIO = null; }
+  pagesEl.onscroll = null;
+  pdfPageDivs = {}; pdfRendered.clear();
+  pagesEl.innerHTML = '<div class="cog-hint">渲染第 '+n+' 页…</div>';
+  const page = await doc.getPage(n);
+  const viewport = page.getViewport({ scale: pdfScale });
+  const pageDiv = document.createElement('div');
+  pageDiv.className = 'pdf-page';
+  pageDiv.style.width = Math.floor(viewport.width)+'px';
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.floor(viewport.width); canvas.height = Math.floor(viewport.height);
+  pageDiv.appendChild(canvas);
+  pagesEl.innerHTML = ''; pagesEl.appendChild(pageDiv);
+  const ctx = canvas.getContext('2d');
+  await page.render({ canvasContext: ctx, viewport }).promise;
+  try { const textContent = await page.getTextContent(); pageDiv.appendChild(buildTextLayer(textContent, viewport)); } catch(_) {}
+  updatePdfPageInfo(total);
+  highlightTocCurrent(n);
+  applyHighlights(pagesEl, b.id, n);
+  saveBookProgress(b, n);
+}
+function layoutScroll(doc, total, pagesEl, b, startPage){
+  pagesEl.classList.add('scroll');
+  pagesEl.innerHTML = '';
+  pdfPageDivs = {}; pdfRendered.clear();
+  for(let i=1;i<=total;i++){
+    const slot = document.createElement('div');
+    slot.className = 'pdf-page-slot';
+    slot.dataset.page = i;
+    slot.innerHTML = '<div class="cog-hint">第 '+i+' 页</div>';
+    pagesEl.appendChild(slot);
+    pdfPageDivs[i] = slot;
+  }
+  if(pdfIO) try{ pdfIO.disconnect(); }catch(_){}
+  pdfIO = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{ if(en.isIntersecting){ renderScrollPage(doc,total,pagesEl,b, parseInt(en.target.dataset.page,10)); } });
+  }, { root: pagesEl, rootMargin: '400px' });
+  Object.values(pdfPageDivs).forEach(d=>pdfIO.observe(d));
+  setupScrollSpy(doc, total, pagesEl, b);
+  requestAnimationFrame(()=>{ const s=pdfPageDivs[startPage]; if(s) s.scrollIntoView(); updatePdfPageInfo(total); });
+}
+async function renderScrollPage(doc, total, pagesEl, b, n){
+  if(pdfRendered.has(n)) return;
+  const slot = pdfPageDivs[n]; if(!slot) return;
+  pdfRendered.add(n);
+  slot.innerHTML = '<div class="cog-hint">渲染第 '+n+' 页…</div>';
+  try {
     const page = await doc.getPage(n);
-    const viewport = page.getViewport({ scale });
+    const viewport = page.getViewport({ scale: pdfScale });
     const pageDiv = document.createElement('div');
     pageDiv.className = 'pdf-page';
     pageDiv.style.width = Math.floor(viewport.width)+'px';
     const canvas = document.createElement('canvas');
     canvas.width = Math.floor(viewport.width); canvas.height = Math.floor(viewport.height);
     pageDiv.appendChild(canvas);
-    pagesEl.innerHTML = ''; pagesEl.appendChild(pageDiv);
+    slot.innerHTML = ''; slot.appendChild(pageDiv);
     const ctx = canvas.getContext('2d');
     await page.render({ canvasContext: ctx, viewport }).promise;
-    try {
-      const textContent = await page.getTextContent();
-      pageDiv.appendChild(buildTextLayer(textContent, viewport));
-    } catch(_) { /* 文字层失败不影响看图 */ }
-    $("#pdfPageInfo").textContent = `第 ${n} / ${total} 页`;
+    try { const textContent = await page.getTextContent(); pageDiv.appendChild(buildTextLayer(textContent, viewport)); } catch(_) {}
+    applyHighlights(slot, b.id, n);
     highlightTocCurrent(n);
-    applyHighlights(pagesEl, b.id, n);
-    saveBookProgress(b, n);
-  }
-
-  $("#pdfPrev").onclick = ()=>{ if(pdfCurrentPage>1) renderPage(pdfCurrentPage-1); };
-  $("#pdfNext").onclick = ()=>{ if(pdfCurrentPage<total) renderPage(pdfCurrentPage+1); };
-  $("#pdfTocToggle").onclick = ()=>{
-    const toc = $("#pdfToc"); if(!toc) return;
-    const mobile = window.matchMedia("(max-width:760px)").matches;
-    if(mobile){ toc.classList.toggle('show'); toc.classList.remove('hidden'); }
-    else { toc.classList.toggle('hidden'); toc.classList.remove('show'); }
+  } catch(e){ slot.innerHTML = '<div class="cog-hint">第 '+n+' 页渲染失败</div>'; pdfRendered.delete(n); }
+}
+function setupScrollSpy(doc, total, pagesEl, b){
+  let ticking=false;
+  pagesEl.onscroll = ()=>{
+    if(ticking) return; ticking=true;
+    requestAnimationFrame(()=>{
+      const base = pagesEl.getBoundingClientRect().top;
+      let cur = pdfCurrentPage, best = Infinity;
+      for(let i=1;i<=total;i++){
+        const slot = pdfPageDivs[i]; if(!slot) continue;
+        const top = slot.getBoundingClientRect().top - base;
+        if(top <= 0 && -top < best){ best = -top; cur = i; }
+      }
+      if(cur !== pdfCurrentPage){
+        pdfCurrentPage = cur;
+        updatePdfPageInfo(total);
+        highlightTocCurrent(cur);
+        saveBookProgress(b, cur);
+      }
+      ticking=false;
+    });
   };
-  $("#pdfJumpBtn").onclick = ()=>{ const n=parseInt($("#pdfJump").value||"0",10); if(n>=1&&n<=total) renderPage(n); };
-  $("#pdfZoomIn").onclick = ()=>{ scale=Math.min(3, scale+0.2); $("#pdfZoomVal").textContent=Math.round(scale*100)+'%'; renderPage(pdfCurrentPage); };
-  $("#pdfZoomOut").onclick = ()=>{ scale=Math.max(0.6, scale-0.2); $("#pdfZoomVal").textContent=Math.round(scale*100)+'%'; renderPage(pdfCurrentPage); };
-  $("#pdfZoomVal").textContent = Math.round(scale*100)+'%';
-  $("#pdfPageAnno").onclick = ()=>{
-    openCogAnno(null, b.id, '', pdfCurrentPage);
-    toast('已为第 '+pdfCurrentPage+' 页打开批注');
-  };
-  loadPdfOutline(doc, renderPage);
-  await renderPage(startPage);
-  bindPdfSelection(pagesEl, b);
 }
 
 /* PDF 大纲（目录导航栏）：解析 outline 点击跳页 */
-function loadPdfOutline(doc, renderPage){
+function loadPdfOutline(doc){
   const list = $("#pdfTocList"); if(!list) return;
   try {
     Promise.resolve(doc.getOutline()).then(outline=>{
       if(!outline || !outline.length){ list.innerHTML = '<div class="toc-empty">📭 本书没有内置目录</div>'; return; }
       list.innerHTML = '';
-      list.appendChild(buildTocDom(outline, doc, renderPage));
+      list.appendChild(buildTocDom(outline, doc));
     }).catch(()=>{ list.innerHTML = '<div class="toc-empty">📭 本书没有内置目录</div>'; });
   } catch(e){ list.innerHTML = '<div class="toc-empty">目录加载失败</div>'; }
 }
@@ -3455,7 +3582,7 @@ async function resolveOutlinePage(doc, dest){
   try { const idx = await doc.getPageIndex(ref); return idx==null ? null : idx+1; }
   catch(e){ return null; }
 }
-function buildTocDom(items, doc, renderPage){
+function buildTocDom(items, doc){
   const wrap = document.createElement('div');
   (items||[]).forEach(item=>{
     const itemEl = document.createElement('div'); itemEl.className = 'toc-item';
@@ -3467,8 +3594,10 @@ function buildTocDom(items, doc, renderPage){
     attachOutlineDest(doc, item, titleEl, pageBadge);
     titleEl.onclick = async ()=>{
       const go = (n)=>{
-        if(n>=1 && n<=doc.numPages){ renderPage(n); }
-        if(window.matchMedia("(max-width:760px)").matches){ const toc=$("#pdfToc"); if(toc) toc.classList.remove('show'); }
+        if(n>=1 && n<=doc.numPages){
+          pdfGoToPage(doc, pdfTotal, pdfPagesEl, pdfBook, n);
+          if(window.matchMedia("(max-width:760px)").matches){ const toc=$("#pdfToc"); if(toc) toc.classList.remove('show'); }
+        }
       };
       if(item._page){ go(item._page); return; }
       if(!item.dest){ return; }
@@ -3476,7 +3605,7 @@ function buildTocDom(items, doc, renderPage){
       if(n) go(n); else { console.warn('目录跳转失败，dest=', item.dest); toast('目录跳转失败'); }
     };
     if(item.items && item.items.length){
-      const sub = buildTocDom(item.items, doc, renderPage);
+      const sub = buildTocDom(item.items, doc);
       sub.classList.add('toc-children');
       itemEl.appendChild(sub);
     }
@@ -3562,7 +3691,8 @@ function bindPdfSelection(pagesEl, b){
       const ba = document.createElement('button'); ba.className='b-an'; ba.textContent='📝 批注';
       row.appendChild(bh); row.appendChild(ba);
       document.body.appendChild(row);
-      bh.onclick = ()=>{ removePdfSelBtn(); sel.removeAllRanges(); addHighlight(b.id, text, pdfCurrentPage); applyHighlights(pagesEl, b.id, pdfCurrentPage); };
+      // 滚动模式下容器内有多页 .textLayer，必须把作用域收窄到当前页槽位（与 renderScrollPage 传 slot 一致），否则高亮会落到 DOM 最靠前的那页
+      bh.onclick = ()=>{ removePdfSelBtn(); sel.removeAllRanges(); addHighlight(b.id, text, pdfCurrentPage); applyHighlights((pdfMode==='scroll' && pdfPageDivs[pdfCurrentPage]) || pagesEl, b.id, pdfCurrentPage); };
       ba.onclick = ()=>{ removePdfSelBtn(); sel.removeAllRanges(); openCogAnno(null, b.id, text, pdfCurrentPage); };
     }, 10);
   };
