@@ -3234,6 +3234,12 @@ async function renderCogReadingFile(){
   const b = cogBooks.find(x=>x.id===cogReadingBookId);
   const box = $("#crFileBox"); if(!box) return;
   if(!b || !b.file || !b.file.path){
+    // 兼容旧数据：早期用「PDF 链接」方式加入的书（无上传文件，仅有 b.pdfUrl）
+    if(b && b.pdfUrl){
+      box.innerHTML = `<div class="pdf-box"><iframe src="${esc(b.pdfUrl)}" allow="fullscreen"></iframe></div>
+        <div class="cog-hint">这是早期通过链接添加的 PDF（只读预览，暂不能选中批注）。建议重新「编辑书籍」用「上传文件」加入，即可选中段落写批注、跨端同步。</div>`;
+      return;
+    }
     box.innerHTML = '<div class="empty">📎 本书暂无文件。点右上角「编辑书籍」上传 PDF / TXT / MD。</div>';
     return;
   }
