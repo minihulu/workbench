@@ -3508,7 +3508,16 @@ function syncPdfScale(page, containerW){
 }
 // 高清渲染倍率：以 devicePixelRatio 为准，再按 canvas 面积/边长硬上限收敛
 // （小屏高 DPR 手机面积小，能吃满 2×/3×；大屏 + 高倍放大时才会降倍率，避免 canvas 分配失败 / 显存暴涨）
-const PDF_MAX_CANVAS_PX = 12 * 1024 * 1024;   // 单页 canvas 像素上限（≈48MB 显存）
+//
+// 面积上限取 2^24 = 16,777,216 px，两边都卡死：
+//  ·下界：dpr 一旦跌破 1，渲染分辨率就低于 CSS 分辨率，反而比改造前（等效 dpr 恒为 1）更糊 ——
+//    那是回退不是取舍。上限越小这个区间来得越早：12M px 时逻辑页宽 >3118 CSS px 就中招
+//    （4K@140%、1600px@200%、1200px@300% 全在内）；16M px 把阈值抬到 ~3601，这些场景回到 dpr≥1。
+//  ·上界：iOS Safari 单 canvas 面积硬上限正是 16,777,216 px，超过会静默变白（不抛错、无从兜底）。
+//    实测继续放大到 24M px 会让 iPad 在 200%/300% 缩放下产生 5 个白页场景，因此绝不能再往上抬。
+//    该值同时是 pdf.js 官方 viewer 的 maxCanvasPixels 默认值，属于业界验证过的安全线。
+// 单页峰值 ≈64MB；驻留总量另由下面的 PDF_MAX_CACHE_PX 预算兜住，不会随页数线性累加。
+const PDF_MAX_CANVAS_PX = 16 * 1024 * 1024;   // 单页 canvas 像素上限（≈64MB 显存，= iOS 硬上限）
 const PDF_MAX_CANVAS_SIDE = 8192;             // 单边上限（各浏览器普遍安全值）
 function pdfDprFor(viewport){
   let r = window.devicePixelRatio || 1;
@@ -3522,14 +3531,24 @@ function pdfDprFor(viewport){
 }
 // 滚动模式显存回收：只回收「已渲染但已滚出可视区」的页，超出保留窗口的按离当前页距离由远及近释放。
 // 释放时把 slot 的高度固定成回收前的实测高度，避免滚动条跳动；页面再次进入可视区时 IO 会重新触发渲染。
-const PDF_KEEP_PAGES = 6;
+const PDF_KEEP_PAGES = 6;                      // 驻留页数上限（页面小的时候按这个来）
+const PDF_MAX_CACHE_PX = 48 * 1024 * 1024;     // 驻留页 canvas 像素总预算（≈192MB 显存）
+let _pdfLastPagePx = 0;                        // 最近一次渲染的单页 canvas 像素数，用于估算可驻留页数
+// 单页 canvas 面积随「阅读区宽度 × 缩放 × dpr²」变化可达 20 倍（手机 5MB ↔ 4K 放大 96MB），
+// 固定页数会让显存跟着放大倍数一起翻。改成按总预算折算：小页多留（滚动更顺），大页少留（守住上限）。
+function pdfKeepCount(){
+  if(!(_pdfLastPagePx > 0)) return PDF_KEEP_PAGES;
+  const byBudget = Math.floor(PDF_MAX_CACHE_PX / _pdfLastPagePx);
+  return Math.max(2, Math.min(PDF_KEEP_PAGES, byBudget));   // 至少留 2 页，保证上下翻页不闪
+}
 function pdfEvictFarPages(){
   if(pdfMode !== 'scroll') return;
-  if(pdfRendered.size <= PDF_KEEP_PAGES) return;
+  const keep = pdfKeepCount();
+  if(pdfRendered.size <= keep) return;
   const candidates = [...pdfRendered]
     .filter(n => !pdfVisible.has(n) && n !== pdfCurrentPage)
     .sort((a,b)=> Math.abs(b-pdfCurrentPage) - Math.abs(a-pdfCurrentPage));   // 离当前页最远的先回收
-  let over = pdfRendered.size - PDF_KEEP_PAGES;
+  let over = pdfRendered.size - keep;
   for(const n of candidates){
     if(over <= 0) break;
     const slot = pdfPageDivs[n];
@@ -3619,6 +3638,7 @@ async function renderPage(doc, total, pagesEl, b, n){
   const canvas = document.createElement('canvas');
   canvas.width = Math.floor(rVp.width); canvas.height = Math.floor(rVp.height);
   canvas.style.width = Math.floor(lVp.width)+'px'; canvas.style.height = Math.floor(lVp.height)+'px';
+  _pdfLastPagePx = canvas.width * canvas.height;   // 供 pdfKeepCount 折算驻留页数
   pageDiv.appendChild(canvas);
   pagesEl.innerHTML = ''; pagesEl.appendChild(pageDiv);
   const ctx = canvas.getContext('2d');
@@ -3673,6 +3693,7 @@ async function renderScrollPage(doc, total, pagesEl, b, n){
     const canvas = document.createElement('canvas');
     canvas.width = Math.floor(rVp.width); canvas.height = Math.floor(rVp.height);
     canvas.style.width = Math.floor(lVp.width)+'px'; canvas.style.height = Math.floor(lVp.height)+'px';
+    _pdfLastPagePx = canvas.width * canvas.height;   // 供 pdfKeepCount 折算驻留页数
     pageDiv.appendChild(canvas);
     slot.innerHTML = ''; slot.appendChild(pageDiv);
     const ctx = canvas.getContext('2d');

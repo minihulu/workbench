@@ -434,15 +434,15 @@ describe('B. syncPdfScale / pdfDprFor 数学正确性', () => {
     assert.ok(dpr > 0.25, `业务可达区间内不应触发 0.25 地板（会突破面积上限），实际 ${dpr}`);
   });
 
-  test('B10 【阈值刻画】记录 dpr 跌破 1（渲染分辨率低于 CSS 分辨率）的临界点', () => {
-    // 面积上限 12M px 决定：逻辑页宽超过约 3118 CSS px 后 dpr 就 < 1。
-    // 换算成用户操作：dpr<1 ⟺ 阅读区宽度 × 缩放倍数 > ~3118。
-    // 本用例把这个阈值钉住 —— 一旦 PDF_MAX_CANVAS_PX 调整，这里会立刻反映出来。
+  test('B10 【防回退】逻辑页宽 ≤ 阈值时 dpr 必须 ≥1（低于 1 就比改造前更糊）', () => {
+    // dpr<1 ⟺ 渲染分辨率低于 CSS 分辨率 ⟺ 比改造前（等效 dpr 恒为 1.0）还糊 —— 那是回退，不是取舍。
+    // 面积上限 16M px（= 2^24）把这个临界点定在逻辑页宽 ~3601 CSS px，
+    // 换算成用户操作：dpr<1 ⟺ 阅读区宽度 × 缩放倍数 > ~3601。
+    // 本用例把阈值钉住 —— PDF_MAX_CANVAS_PX 一旦调整，这里会立刻反映出来。
     const env = loadSandbox({ devicePixelRatio: 2 });
-    const page = makePage();
     const ratio = A4_H / A4_W;
     const wThreshold = Math.sqrt(env.api.PDF_MAX_CANVAS_PX / ratio);
-    assert.ok(Math.abs(wThreshold - 3118) < 5, `阈值应约 3118px，实际 ${wThreshold.toFixed(0)}`);
+    assert.ok(Math.abs(wThreshold - 3601) < 5, `阈值应约 3601px，实际 ${wThreshold.toFixed(0)}`);
 
     const dprAt = (cw, zoom) => {
       const e = loadSandbox({ devicePixelRatio: 2 });
@@ -451,17 +451,49 @@ describe('B. syncPdfScale / pdfDprFor 数学正确性', () => {
       const s = e.api.syncPdfScale(p, cw);
       return e.api.pdfDprFor(p.getViewport({ scale: s }));
     };
-    // 默认缩放：各档设备都应 ≥1（高清目标达成）
-    assert.ok(dprAt(340, 1) >= 1, '手机默认缩放必须高清');
-    assert.ok(dprAt(1200, 1) >= 1, '桌面默认缩放必须高清');
-    assert.ok(dprAt(2400, 1) >= 1, '4K 默认缩放必须高清');
-    // 阈值另一侧：dpr 跌破 1（当前实现的已知取舍）
-    assert.ok(dprAt(2400, 1.4) < 1, '4K + 140% 已跌破 1（已知取舍，见测试报告）');
-    assert.ok(dprAt(1200, 3) < 1, '桌面 + 300% 已跌破 1（已知取舍，见测试报告）');
+
+    // 不变量：只要「阅读区宽 × 缩放」没越过阈值，就必须 ≥1
+    for (const cw of [340, 768, 1024, 1200, 1600, 2400]) {
+      for (const z of [1, 1.2, 1.4, 1.6, 1.8, 2, 2.5, 3]) {
+        const d = dprAt(cw, z);
+        if (cw * z <= wThreshold) {
+          assert.ok(d >= 1, `回退：阅读区 ${cw}px × ${z * 100}%（逻辑页宽 ${cw * z}）dpr=${d.toFixed(2)} < 1，比改造前更糊`);
+        }
+      }
+    }
+    // 具体钉住几个此前（12M 上限时）跌破 1、现已修复的场景
+    for (const [label, cw, z] of [['4K@100%', 2400, 1], ['4K@140%', 2400, 1.4], ['1600px@200%', 1600, 2], ['1200px@300%', 1200, 3]]) {
+      assert.ok(dprAt(cw, z) >= 1, `${label} 应已修复为 dpr≥1，实际 ${dprAt(cw, z).toFixed(2)}`);
+    }
+    // 阈值另一侧（超宽阅读区 + 极限放大）仍会跌破 1 —— 面积上限的必然代价，可接受
+    assert.ok(dprAt(2400, 3) < 1, '前置条件：4K@300% 确实触发面积上限（否则本上限形同虚设）');
     // 但无论如何都不会低到不可读，且始终守住 canvas 硬上限
     for (const [cw, z] of [[2400, 3], [1200, 3], [3672, 3]]) {
       const d = dprAt(cw, z);
       assert.ok(d >= 0.25, `dpr 过低：cw=${cw} zoom=${z} → ${d}`);
+    }
+  });
+
+  test('B11 【白页红线】任何可达场景下 canvas 面积都不得超过 iOS Safari 硬上限', () => {
+    // iOS Safari 单 canvas 面积上限 = 16,777,216 px，超过后 canvas 静默变白（不抛错，无从兜底）。
+    // PDF_MAX_CANVAS_PX 必须 ≤ 这个值 —— 曾尝试放宽到 24M px，实测会让 iPad 在 200%/300% 下白页。
+    const IOS_MAX_CANVAS_PX = 16777216;
+    const env = loadSandbox({ devicePixelRatio: 2 });
+    assert.ok(env.api.PDF_MAX_CANVAS_PX <= IOS_MAX_CANVAS_PX,
+      `面积上限 ${env.api.PDF_MAX_CANVAS_PX} 超过 iOS 硬上限 ${IOS_MAX_CANVAS_PX} → iPad 会白页`);
+
+    // iOS 设备典型阅读区 × 全缩放区间，逐一验证实际 canvas 不越线
+    for (const [dev, cw] of [['iPhone', 390], ['iPad竖', 820], ['iPad横', 1180], ['iPadPro', 1366]]) {
+      for (const z of [0.5, 1, 1.5, 2, 2.5, 3]) {
+        const e = loadSandbox({ devicePixelRatio: 2 });
+        const p = makePage();
+        e.api.set('pdfZoom', z);
+        const s = e.api.syncPdfScale(p, cw);
+        const lVp = p.getViewport({ scale: s });
+        const rVp = p.getViewport({ scale: s * e.api.pdfDprFor(lVp) });
+        const px = Math.floor(rVp.width) * Math.floor(rVp.height);
+        assert.ok(px <= IOS_MAX_CANVAS_PX, `${dev} @${z * 100}% → canvas ${px}px 超 iOS 上限 → 白页`);
+      }
     }
   });
 });
@@ -866,6 +898,48 @@ describe('E. pdfEvictFarPages 不误伤', () => {
     assert.ok(slots[13].children[0], '可见页的 DOM 必须保留');
     assert.ok(left.size <= env.api.PDF_KEEP_PAGES + env.api.get('pdfVisible').size,
       `回收后驻留页数异常：${left.size}`);
+  });
+
+  test('E11 【显存预算】驻留页数随单页 canvas 体积自动收缩，总量不超 PDF_MAX_CACHE_PX', () => {
+    const env = loadSandbox();
+    const budget = env.api.get('PDF_MAX_CACHE_PX');
+    const keepAt = (px) => { env.api.set('_pdfLastPagePx', px); return env.api.get('pdfKeepCount')(); };
+
+    // 未渲染过任何页（页体积未知）→ 回落到固定上限，保持既有行为
+    assert.equal(keepAt(0), env.api.PDF_KEEP_PAGES, '页体积未知时应回落 PDF_KEEP_PAGES');
+    // 小页（手机 ~1.4M px）：预算够，仍按页数上限
+    assert.equal(keepAt(1.4e6), env.api.PDF_KEEP_PAGES, '小页不应被预算限制');
+    // 大页（4K 放大后逼近单页上限 24M px）：必须收缩
+    const bigKeep = keepAt(env.api.PDF_MAX_CANVAS_PX);
+    assert.ok(bigKeep < env.api.PDF_KEEP_PAGES, `大页应收缩驻留页数，实际 ${bigKeep}`);
+    assert.ok(bigKeep * env.api.PDF_MAX_CANVAS_PX <= budget, '驻留总量超出显存预算');
+    // 地板：再大的页也至少留 2 页，保证上下翻页不闪
+    assert.equal(keepAt(1e12), 2, '驻留页数地板应为 2');
+
+    // 各档页体积下，驻留总量都不得突破预算（除非已被 2 页地板兜住）
+    for (const px of [2e6, 5e6, 8e6, 12e6, 20e6, 25e6]) {
+      const k = keepAt(px);
+      assert.ok(k * px <= budget || k === 2, `页体积 ${px} → 留 ${k} 页，总量 ${k * px} 超预算 ${budget}`);
+    }
+  });
+
+  test('E12 【显存预算】渲染大页后，回收会按预算把驻留页数压到 PDF_KEEP_PAGES 以下', async () => {
+    const env = loadSandbox({ devicePixelRatio: 2 });
+    // 注意：第 9 页必须是「尚未渲染」的，否则 renderScrollPage 会在入口直接 return，
+    // _pdfLastPagePx 不会被写入，本用例就测不到东西了。
+    const slots = setupScroll(env, { rendered: [1,2,3,4,5,6,7,8], visible: [9], current: 9 });
+    // 造一个超大页：4K 阅读区 + 300% → 单页 canvas 顶到面积上限
+    const page = instrument(env, makePage());
+    env.api.set('pdfZoom', 3);
+    await env.api.renderScrollPage(makeDoc(page), 30, makeContainer(env, 2400), { id: 'b' }, 9);
+
+    const px = env.api.get('_pdfLastPagePx');
+    assert.ok(px > 12e6, `前置条件：单页应接近面积上限，实际 ${px}`);
+    const left = env.api.get('pdfRendered');
+    assert.ok(left.size < env.api.PDF_KEEP_PAGES, `大页场景应压到 ${env.api.PDF_KEEP_PAGES} 页以下，实际 ${left.size}`);
+    assert.ok(left.size * px <= env.api.get('PDF_MAX_CACHE_PX'), `驻留总量 ${left.size * px} 超出显存预算`);
+    assert.ok(left.has(9), '当前页/可见页仍不得被回收');
+    assert.ok(slots[9].children[0], '当前页 DOM 必须保留');
   });
 });
 
