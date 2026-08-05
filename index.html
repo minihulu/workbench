@@ -438,6 +438,25 @@
   .read-status-row{display:flex; align-items:center; gap:10px; margin:8px 0;}
   .read-status-row select{flex:1; max-width:200px;}
 
+  /* ===== PDF.js 阅读器（小说式：内联渲染 + 选中写批注） ===== */
+  .pdf-reader{margin:10px 0; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--card);}
+  .pdf-toolbar{display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding:8px 10px; background:var(--bg2); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5;}
+  .pdf-toolbar button{font-size:12.5px; padding:5px 9px;}
+  .pdf-toolbar input[type=number]{width:56px; padding:5px 6px; font-size:12.5px;}
+  .pdf-pageinfo{font-size:12.5px; color:var(--txt2); margin:0 4px; white-space:nowrap;}
+  .pdf-zoom{font-size:12px; color:var(--txt2); margin-left:6px;}
+  .pdf-pages{padding:14px; background:#525659; max-height:78vh; overflow:auto; text-align:center;}
+  .pdf-page{display:inline-block; position:relative; margin:0 auto; background:#fff; box-shadow:0 2px 12px rgba(0,0,0,.35);}
+  .pdf-page canvas{display:block; width:100%; height:auto;}
+  .pdf-page .textLayer{position:absolute; inset:0; overflow:hidden; line-height:1; text-size-adjust:none; transform-origin:0 0; z-index:2;}
+  .pdf-page .textLayer span, .pdf-page .textLayer br{color:transparent; position:absolute; white-space:pre; cursor:text; transform-origin:0% 0%;}
+  .pdf-page .textLayer ::selection{background:rgba(98,120,255,.35);}
+  .pdf-sel-btn{position:absolute; z-index:50; transform:translate(-50%,-130%); background:var(--brand); color:#fff; border:0; border-radius:8px; padding:6px 10px; font-size:12.5px; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.3); white-space:nowrap;}
+  .pdf-sel-btn::after{content:""; position:absolute; left:50%; top:100%; transform:translateX(-50%); border:6px solid transparent; border-top-color:var(--brand);}
+  .pdf-sel-btn:hover{filter:brightness(1.08);}
+  .anno .a-page{display:inline-block; font-size:11px; color:var(--brand); background:var(--bg2); border:1px solid var(--line); border-radius:6px; padding:1px 7px; margin:0 6px 2px 0; cursor:pointer;}
+  .anno .a-page:hover{background:var(--brand); color:#fff;}
+
   /* ===== 我的思考 / 英语表达 列表项 ===== */
   .anno{position:relative; padding:13px; border-radius:13px; border:1px solid var(--line); background:var(--card); margin-bottom:10px; box-shadow:var(--shadow);}
   .anno .a-book{font-size:12px; color:var(--brand); font-weight:700; margin-bottom:6px;}
@@ -3105,7 +3124,7 @@ $("#cogReviewModal").addEventListener("click", e=>{ if(e.target.id==="cogReviewM
 
 /* ============ 认知资产 V2：阅读入口（书架 / 阅读空间 / 我的思考 / 英语表达） ============ */
 let cogReadingBookId = null;
-let cogAnnoId = null, cogAnnoBookId = null, cogAnnoWords = [];
+let cogAnnoId = null, cogAnnoBookId = null, cogAnnoWords = [], cogAnnoPage = 0;
 
 /* ---- 阅读空间（屏5） ---- */
 function openCogReadingSpace(bookId){
@@ -3225,8 +3244,7 @@ async function renderCogReadingFile(){
     const url = j.url;
     const type = (b.file.type || "").toLowerCase();
     if(type === "application/pdf" || /\.pdf$/i.test(b.file.name||"")){
-      box.innerHTML = `<div class="pdf-box"><iframe src="${esc(url)}" allow="fullscreen"></iframe></div>
-        <div class="cog-hint">PDF 由浏览器直接打开，翻页后把当前位置填到上方「阅读位置」。</div>`;
+      await renderPdfBook(b, url);
     } else if(type.startsWith("text/") || /\.(txt|md)$/i.test(b.file.name||"")){
       const r = await fetch(url);
       const text = await r.text();
@@ -3239,6 +3257,158 @@ async function renderCogReadingFile(){
     box.innerHTML = `<div class="empty">文件加载失败：${esc(String(e.message || e))}</div>`;
   }
 }
+
+/* ---- PDF.js 内联阅读器（小说式：翻页 + 选中写批注） ---- */
+let _pdfjsPromise = null;
+async function ensurePdfJs(){
+  if(window.pdfjsLib) return window.pdfjsLib;
+  if(!_pdfjsPromise){
+    _pdfjsPromise = import('/vendor/pdfjs/pdf.min.mjs').then(m=>{
+      window.pdfjsLib = m;
+      m.GlobalWorkerOptions.workerSrc = '/vendor/pdfjs/pdf.worker.min.mjs';
+      return m;
+    }).catch(e=>{ _pdfjsPromise = null; throw e; });
+  }
+  return _pdfjsPromise;
+}
+let pdfCurrentPage = 1;
+let pdfJumpTo = null;     // 从批注列表跳转指定页
+let _pdfSelBound = false;
+
+async function renderPdfBook(b, url){
+  const lib = await ensurePdfJs();
+  const box = $("#crFileBox");
+  box.innerHTML = `<div class="pdf-reader">
+    <div class="pdf-toolbar">
+      <button id="pdfPrev" class="btn sm ghost">‹ 上一页</button>
+      <span class="pdf-pageinfo" id="pdfPageInfo">加载中…</span>
+      <button id="pdfNext" class="btn sm ghost">下一页 ›</button>
+      <input id="pdfJump" type="number" min="1" placeholder="页">
+      <button id="pdfJumpBtn" class="btn sm">跳转</button>
+      <span class="pdf-zoom">缩放</span>
+      <button id="pdfZoomOut" class="btn sm ghost">－</button>
+      <span class="pdf-pageinfo" id="pdfZoomVal">140%</span>
+      <button id="pdfZoomIn" class="btn sm ghost">＋</button>
+    </div>
+    <div class="pdf-pages" id="pdfPages"><div class="cog-hint">正在渲染 PDF…</div></div>
+  </div>`;
+  const data = await fetch(url).then(r=>r.arrayBuffer());
+  const doc = await lib.getDocument({ data }).promise;
+  const total = doc.numPages;
+  const startPage = Math.min(Math.max(1, pdfJumpTo||1), total);
+  pdfJumpTo = null;
+  pdfCurrentPage = startPage;
+  const pagesEl = $("#pdfPages");
+  let scale = 1.4;
+
+  async function renderPage(n){
+    pdfCurrentPage = n;
+    pagesEl.innerHTML = '<div class="cog-hint">渲染第 '+n+' 页…</div>';
+    const page = await doc.getPage(n);
+    const viewport = page.getViewport({ scale });
+    const pageDiv = document.createElement('div');
+    pageDiv.className = 'pdf-page';
+    pageDiv.style.width = Math.floor(viewport.width)+'px';
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.floor(viewport.width); canvas.height = Math.floor(viewport.height);
+    pageDiv.appendChild(canvas);
+    pagesEl.innerHTML = ''; pagesEl.appendChild(pageDiv);
+    const ctx = canvas.getContext('2d');
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    try {
+      const textContent = await page.getTextContent();
+      pageDiv.appendChild(buildTextLayer(textContent, viewport));
+    } catch(_) { /* 文字层失败不影响看图 */ }
+    $("#pdfPageInfo").textContent = `第 ${n} / ${total} 页`;
+  }
+
+  $("#pdfPrev").onclick = ()=>{ if(pdfCurrentPage>1) renderPage(pdfCurrentPage-1); };
+  $("#pdfNext").onclick = ()=>{ if(pdfCurrentPage<total) renderPage(pdfCurrentPage+1); };
+  $("#pdfJumpBtn").onclick = ()=>{ const n=parseInt($("#pdfJump").value||"0",10); if(n>=1&&n<=total) renderPage(n); };
+  $("#pdfZoomIn").onclick = ()=>{ scale=Math.min(3, scale+0.2); $("#pdfZoomVal").textContent=Math.round(scale*100)+'%'; renderPage(pdfCurrentPage); };
+  $("#pdfZoomOut").onclick = ()=>{ scale=Math.max(0.6, scale-0.2); $("#pdfZoomVal").textContent=Math.round(scale*100)+'%'; renderPage(pdfCurrentPage); };
+  $("#pdfZoomVal").textContent = Math.round(scale*100)+'%';
+  await renderPage(startPage);
+  bindPdfSelection(pagesEl, b);
+}
+
+/* 手动构建可选中的文字层（v4 的 renderTextLayer 已移入 viewer 模块，这里自己实现，零依赖）。 */
+function buildTextLayer(textContent, viewport){
+  const container = document.createElement('div');
+  container.className = 'textLayer';
+  container.style.width = Math.floor(viewport.width)+'px';
+  container.style.height = Math.floor(viewport.height)+'px';
+  const vt = viewport.transform;
+  (textContent.items||[]).forEach(item=>{
+    if(!item || item.str == null || item.str === '') return;
+    const it = item.transform;
+    // 合并视口变换与文字变换：tx = vt · it
+    const tx = [
+      vt[0]*it[0] + vt[2]*it[1],
+      vt[1]*it[0] + vt[3]*it[1],
+      vt[0]*it[2] + vt[2]*it[3],
+      vt[1]*it[2] + vt[3]*it[3],
+      vt[0]*it[4] + vt[2]*it[5] + vt[4],
+      vt[1]*it[4] + vt[3]*it[5] + vt[5]
+    ];
+    const span = document.createElement('span');
+    span.style.position = 'absolute';
+    span.style.left = '0px';
+    span.style.top = '0px';
+    span.style.fontSize = '1px';   // 字形尺寸由 matrix 的缩放分量承载
+    span.style.transform = `matrix(${tx[0]}, ${tx[1]}, ${tx[2]}, ${tx[3]}, ${tx[4]}, ${tx[5]})`;
+    span.textContent = item.str;
+    span.dataset.w = item.width || 0;
+    span.dataset.tx = tx.join(',');
+    container.appendChild(span);
+  });
+  // 按 item.width 做横向校正，避免相邻文字重叠
+  Array.prototype.forEach.call(container.childNodes, span=>{
+    if(!span.dataset || !span.dataset.tx) return;
+    const tx = span.dataset.tx.split(',').map(Number);
+    const w = parseFloat(span.dataset.w) * viewport.scale;
+    const cur = span.offsetWidth;
+    if(cur > 0){
+      const k = w / cur;
+      span.style.transform = `matrix(${tx[0]*k}, ${tx[1]}, ${tx[2]}, ${tx[3]}, ${tx[4]}, ${tx[5]})`;
+    }
+  });
+  return container;
+}
+
+function bindPdfSelection(pagesEl, b){
+  pagesEl.onmouseup = ()=>{
+    setTimeout(()=>{
+      const sel = window.getSelection();
+      const text = sel ? sel.toString().trim() : "";
+      removePdfSelBtn();
+      if(!text) return;
+      const range = sel.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+      if(rect.width===0 && rect.height===0) return;
+      const btn = document.createElement('button');
+      btn.className = 'pdf-sel-btn';
+      btn.textContent = '📝 写批注';
+      btn.style.left = (rect.left + rect.width/2) + 'px';
+      btn.style.top = rect.top + 'px';
+      document.body.appendChild(btn);
+      btn.onclick = ()=>{
+        removePdfSelBtn();
+        sel.removeAllRanges();
+        openCogAnno(null, b.id, text, pdfCurrentPage);
+      };
+    }, 10);
+  };
+  if(!_pdfSelBound){
+    document.addEventListener('mousedown', (e)=>{
+      if(e.target && e.target.closest && e.target.closest('.pdf-sel-btn')) return;
+      removePdfSelBtn();
+    }, true);
+    _pdfSelBound = true;
+  }
+}
+function removePdfSelBtn(){ const ex = document.querySelector('.pdf-sel-btn'); if(ex) ex.remove(); }
+
 function saveCogProgress(){
   const b = cogBooks.find(x=>x.id===cogReadingBookId); if(!b) return;
   const p = Math.max(0, Math.min(100, parseInt($("#crProg")?.value||b.progress||0,10)||0));
@@ -3259,9 +3429,10 @@ function saveCogSediment(){
 }
 
 /* ---- 阅读批注：我的思考（弹窗） ---- */
-function openCogAnno(id, bookId, origText){
+function openCogAnno(id, bookId, origText, page){
   const x = id ? cogReads.find(r=>r.id===id) : null;
   cogAnnoId = id || null; cogAnnoBookId = bookId || (x && x.sourceBookId) || null; cogAnnoWords = [];
+  cogAnnoPage = (page!=null) ? page : (x ? (x.page||0) : 0);
   const bk = cogAnnoBookId ? cogBooks.find(b=>b.id===cogAnnoBookId) : null;
   $("#caBook").value = x ? (x.book||"") : (bk ? bk.title : "");
   $("#caLevel").value = (x && x.level) || "cet4";
@@ -3292,7 +3463,7 @@ function saveCogAnno(){
   const lvl = $("#caLevel").value;
   let anno = null;
   if(under || orig){
-    const rec = { kind:"annotation", book, sourceBookId:cogAnnoBookId||"", original:orig, understanding:under, before:orig, after:under, chapter:"", date:todayStr(), apply:[], doubt:"", duration:0, cat:COG_CATS[0], created:Date.now(), updatedAt:Date.now(), deviceId, deleted:false };
+    const rec = { kind:"annotation", book, sourceBookId:cogAnnoBookId||"", original:orig, understanding:under, before:orig, after:under, chapter:"", page: cogAnnoPage||0, date:todayStr(), apply:[], doubt:"", duration:0, cat:COG_CATS[0], created:Date.now(), updatedAt:Date.now(), deviceId, deleted:false };
     if(cogAnnoId){ const x=cogReads.find(r=>r.id===cogAnnoId); if(x) Object.assign(x, rec); anno = x; toast("已更新"); }
     else { rec.id = uid(); cogReads.push(rec); anno = rec; toast("已记录思考"); }
   }
@@ -3319,7 +3490,7 @@ function renderCogAnno(){
   if(!list.length){ box.innerHTML='<div class="empty">还没有读书思考。进入一本书的阅读空间，点「我的思考」开始沉淀。</div>'; return; }
   box.innerHTML = list.map(r=>`
     <div class="anno" data-anno="${r.id}">
-      <div class="a-book">《${esc(r.book||"？")}》</div>
+      <div class="a-book">《${esc(r.book||"？")}》${r.page?`<span class="a-page" data-page="${r.page}">第 ${r.page} 页 ›</span>`:""}</div>
       ${r.original?`<div class="a-orig">“${esc(r.original)}”</div>`:""}
       <div class="a-under">${esc(r.understanding||"")}</div>
       <div class="a-acts">
@@ -3330,6 +3501,7 @@ function renderCogAnno(){
     </div>`).join("");
   $$("#cogAnnoList .anno").forEach(el=>{
     const id = el.dataset.anno; const r = list.find(x=>x.id===id);
+    const pg = el.querySelector('.a-page'); if(pg) pg.onclick = ()=>{ if(r.sourceBookId){ pdfJumpTo = r.page; openCogReadingSpace(r.sourceBookId); } };
     const gen = el.querySelector('[data-act="gen"]'); if(gen) gen.onclick = ()=> genExprFromAnno(r);
     el.querySelector('[data-act="edit"]').onclick = ()=> openCogAnno(id);
     el.querySelector('[data-act="del"]').onclick = ()=>{ cogAnnoId=id; delCogAnno(); };

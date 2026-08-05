@@ -10,7 +10,7 @@
  *
  * 用法：npm run build:pages
  */
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, stat, writeFile, readdir, cp } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -58,6 +58,15 @@ async function main() {
   }
   console.log(`[build:pages] 复制静态资源 ${copied}/${ASSETS.length} 个`);
 
+  // 递归复制 vendor/（自托管的第三方前端库，如 PDF.js）—— 缺失则跳过并告警。
+  const VENDOR = 'vendor';
+  if (existsSync(join(ROOT, VENDOR))) {
+    await cp(join(ROOT, VENDOR), join(OUT, VENDOR), { recursive: true });
+    console.log('[build:pages] 复制 vendor/ -> _site/vendor/');
+  } else {
+    console.warn('[build:pages] 跳过缺失的 vendor/ 目录');
+  }
+
   // Pages 默认给所有静态资源加长缓存；HTML 必须禁缓存，
   // 否则前端改了用户端还是老版本（对齐 server.py serve_static 的 no-store）。
   await writeFile(
@@ -67,6 +76,8 @@ async function main() {
       '  Cache-Control: no-store, no-cache, must-revalidate, max-age=0',
       '/index.html',
       '  Cache-Control: no-store, no-cache, must-revalidate, max-age=0',
+      '/vendor/*',
+      '  Cache-Control: public, max-age=86400, immutable',
       '',
     ].join('\n'),
     'utf8',

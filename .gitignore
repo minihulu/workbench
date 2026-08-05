@@ -43,3 +43,6 @@ _site/
 /index.html
 .wrangler/
 .npmtmp/
+
+# 临时解压/打包残留（手动清理用，不入库）
+_trash/
