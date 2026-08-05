@@ -24,10 +24,13 @@ const ALLOWED_TYPES = new Set([
   'text/x-markdown',
 ]);
 
-function sanitizeFilename(name: string): string {
-  // 取 basename、替换危险字符、保留中文 / 空格 / 点
+// 对象 key 必须用 ASCII：Supabase Storage 拒绝《》等 CJK 符号 / 控制字符（→ InvalidKey）。
+// 真实中文名通过返回的 file.name 保留作展示，不影响读取（读取走 file.path + 签名 URL）。
+function safeObjectKey(name: string): string {
   const base = String(name || 'file').split(/[\\/]/).pop() || 'file';
-  return base.replace(/[^\w\u4e00-\u9fa5. \-()\[\]]/g, '_').slice(0, 200) || 'file';
+  const m = base.match(/\.([a-zA-Z0-9]+)$/);
+  const ext = m ? m[1].toLowerCase() : 'bin';
+  return `file_${Date.now().toString(36)}.${ext}`;
 }
 
 function decodeBase64(s: string): Uint8Array {
@@ -69,7 +72,7 @@ export const onRequestPost: PagesFunction<Env> = guard(async ({ request, env }) 
     return errorResponse(413, `文件过大（${(bytes.byteLength / 1024 / 1024).toFixed(1)}MB，限 20MB）`);
   }
 
-  const safeName = sanitizeFilename(filename);
+  const safeName = safeObjectKey(filename);
   const path = `cog/${user.uid}/${bookId}/${safeName}`;
 
   try {
@@ -82,7 +85,7 @@ export const onRequestPost: PagesFunction<Env> = guard(async ({ request, env }) 
     ok: true,
     path,
     file: {
-      name: safeName,
+      name: filename, // 真实中文名（仅展示）；对象 key 已是 ASCII，避免 InvalidKey
       type: contentType,
       size: bytes.byteLength,
       path,
