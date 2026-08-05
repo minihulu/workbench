@@ -1227,7 +1227,14 @@ $("#hamburger").onclick = ()=>{ $("#sidebar").classList.add("open"); $("#overlay
 $("#overlay").onclick = closeDrawer;
 
 /* ============ 数据 ============ */
-let times = LS.get("wb_time", []);
+function normalizeTimes(arr){
+  /* 自愈历史脏数据：计时器曾把时长以毫秒存入（应为分钟）。单条记录 dur>10000 分钟≈166h 不可能，判定为毫秒并换算回分钟 */
+  return (arr||[]).map(t=>{
+    if(t && typeof t.dur==="number" && t.dur>10000) return Object.assign({}, t, { dur: Math.round(t.dur/60000) });
+    return t;
+  });
+}
+let times = normalizeTimes(LS.get("wb_time", []));
 let ideas = LS.get("wb_ideas", []);
 if(Array.isArray(ideas) && ideas.length){ let _dirty=false; ideas.forEach(i=>{ if(!i.tags && i.cat || !i.status || !i.source || i.links===undefined){ normalizeIdea(i); _dirty=true; } }); if(_dirty) persistIdeas(); }
 let notes = LS.get("wb_notes", []);
@@ -1330,17 +1337,17 @@ $("#startBtn").onclick = ()=>{
 };
 $("#stopBtn").onclick = ()=>{
   if(!timer.running) return;
-  const dur = Date.now()-timer.start;
+  const durMs = Date.now()-timer.start;
   clearInterval(timer.tick);
-  const mins = Math.round(dur/60000);
-  if(mins<1){ toast("不足 1 分钟，未记录"); timer.running=false; renderTimer(); return; }
+  const dur = Math.max(1, Math.round(durMs/60000));   // 单位：分钟，与全系统（minutesOnDate/recEnd/conflicts/手动添加）保持一致
+  if(dur<1){ toast("不足 1 分钟，未记录"); timer.running=false; renderTimer(); return; }
   const st=new Date(timer.start), sd=fmtDate(st), sh=pad(st.getHours())+":"+pad(st.getMinutes());
-  const cf=conflicts(sd, sh, mins);
+  const cf=conflicts(sd, sh, dur);
   if(cf){ toast("时间冲突：与「"+cf.activity+"」("+cf.start+"-"+recEnd(cf)+") 重叠"); timer.running=false; renderTimer(); return; }
   times.push({ id:uid(), date:sd, start:sh, dur, activity:timer.activity, cat:timer.cat, note:"", updatedAt:Date.now(), deleted:false, deviceId });
   saveTimes(); timer.running=false; renderTimer();
   $("#timerActivity").value="";
-  toast("已记录 "+mins+" 分钟"); focusDate(sd); renderTimeStats(); renderStats();
+  toast("已记录 "+dur+" 分钟"); focusDate(sd); renderTimeStats(); renderStats();
 };
 
 /* 手动添加 */
@@ -1433,15 +1440,22 @@ function renderPie(date){
   if(!entries.length){ wrap.innerHTML='<div class="empty">今天还没有记录～点下面的「开始计时」或「手动添加」。</div>'; return; }
 
   /* 圆环 SVG：240px，柔和阴影，中心显示总时长+小时+较昨日 */
-  const S=240, cx=S/2, cy=S/2, R=104, r=70, C=2*Math.PI*((R+r)/2), gap=3;
-  let off=0, arcs="";
+  const S=240, cx=S/2, cy=S/2, R=104, r=70, midR=(R+r)/2;
+  const C=2*Math.PI*midR, gap=3, sepW=2.5;
+  let off=0, arcs="", seps="";
   entries.forEach(([c,v])=>{
     const len=(v/total)*(C-gap*entries.length);
     const col = catColors(c);
-    arcs += `<circle cx="${cx}" cy="${cy}" r="${(R+r)/2}" fill="none" stroke="${col}" stroke-width="${R-r}"
-       stroke-dasharray="${len} ${C}" stroke-dashoffset="${-off}" stroke-linecap="round"
-       transform="rotate(-90 ${cx} ${cy})" opacity="0.95"/>`;
-    off += len+gap;
+    /* 色块：平头端点（butt），不再用 round 圆头——圆头会越过间隙把相邻颜色糊成一团 */
+    arcs += `<circle cx="${cx}" cy="${cy}" r="${midR}" fill="none" stroke="${col}" stroke-width="${R-r}"
+       stroke-dasharray="${len} ${C}" stroke-dashoffset="${-off}" stroke-linecap="butt"
+       transform="rotate(-90 ${cx} ${cy})"/>`;
+    off += len;
+    /* 白色分隔条：覆盖在接缝处，让相邻颜色边缘清晰可辨（始终等于卡片底色，不受主题影响） */
+    seps += `<circle cx="${cx}" cy="${cy}" r="${midR}" fill="none" stroke="var(--card)" stroke-width="${R-r+2}"
+       stroke-dasharray="${sepW} ${C}" stroke-dashoffset="${-off}" stroke-linecap="butt"
+       transform="rotate(-90 ${cx} ${cy})"/>`;
+    off += gap;
   });
   /* 中心信息：总时长（最大类别 + 占比） */
   const top = entries[0];
@@ -1461,7 +1475,7 @@ function renderPie(date){
           <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#6366F1" flood-opacity="0.18"/>
         </filter>
       </defs>
-      <g filter="url(#pieShadow)">${arcs}</g>
+      <g filter="url(#pieShadow)">${arcs}</g>${seps}
       <circle cx="${cx}" cy="${cy}" r="${r-4}" fill="var(--card)"/>
       <text x="${cx}" y="${cy-18}" text-anchor="middle" font-size="32" font-weight="800" fill="var(--txt)" letter-spacing="-1">${heroH}</text>
       <text x="${cx}" y="${cy+2}" text-anchor="middle" font-size="12" fill="var(--txt2)">${heroSub}</text>
@@ -2814,7 +2828,7 @@ async function pullSync(){
     if(!r.ok) return;
     const j = await r.json();
     if(j.payload){
-      times = mergeRecords(times, j.payload.times);   // 记录级合并，保留本地独有记录
+      times = normalizeTimes(mergeRecords(times, j.payload.times));   // 记录级合并，保留本地独有记录
       ideas = mergeRecords(ideas, j.payload.ideas);
       notes = mergeRecords(notes, j.payload.notes||[]).map(normNote);
       diary = mergeRecords(diary, j.payload.diary);
