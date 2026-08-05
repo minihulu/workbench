@@ -437,6 +437,13 @@
   .read-sediment textarea{width:100%; min-height:64px; margin-bottom:8px;}
   .read-status-row{display:flex; align-items:center; gap:10px; margin:8px 0;}
   .read-status-row select{flex:1; max-width:200px;}
+  .read-file-source{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; margin:8px 0 10px; border:1.5px dashed #d4d7e3; border-radius:12px; background:linear-gradient(180deg, #fafbff 0%, #ffffff 100%);}
+  .read-file-source .read-file-state{font-size:13px; color:var(--txt2);}
+  .read-file-source .read-file-state[data-kind="local"]{color:#7c3aed; font-weight:600;}
+  .read-file-source .read-file-state[data-kind="cloud"]{color:#10b981; font-weight:600;}
+  .read-file-source .read-file-state[data-kind="link"]{color:#f59e0b;}
+  .read-file-source .read-file-state[data-kind="bad"]{color:#c0392b;}
+  .read-file-source .read-file-acts{display:flex; gap:8px; flex-shrink:0;}
 
   /* ===== PDF.js 阅读器（小说式：内联渲染 + 选中写批注） ===== */
   .pdf-reader{margin:10px 0; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--card);}
@@ -2937,6 +2944,7 @@ async function saveCogBook(){
         b.updatedAt = Date.now();
         saveCog(); renderCogHome(); renderCogBooks();
         toast("文件已上传");
+        if(isNew){ openCogReadingSpace(b.id); return; }
       }
     } catch(e){
       toast("文件上传失败：" + (e.message || e));
@@ -3148,6 +3156,14 @@ function renderCogReading(){
         <div class="read-author">${esc(b.author||"未知作者")}</div>
       </div>
     </div>
+    <div class="read-file-source">
+      <span class="read-file-state" id="crFileState"></span>
+      <div class="read-file-acts">
+        <button class="btn sm" id="crOpenLocal" title="不传云端，立即读取本机 PDF">📁 打开本地 PDF</button>
+        <button class="btn sm ghost" id="crUploadFile" title="上传到云端，跨设备可读"${b&&b.file&&b.file.path?'' : ' style="display:none;"'}>☁️ 上传</button>
+        <input type="file" id="crLocalFile" accept="application/pdf" style="display:none;">
+      </div>
+    </div>
     <div class="read-status-row">
       <span class="fld" style="margin:0;">阅读状态</span>
       <select id="crStatus">
@@ -3227,22 +3243,46 @@ function renderCogReading(){
       };
     });
   }
+  // 文件来源切换（本地模式立即可读；上传则走云端）
+  cogReadingLocalBlob = null;
+  const openBtn = $("#crOpenLocal"), upBtn = $("#crUploadFile"), fi = $("#crLocalFile");
+  if(openBtn && fi){
+    openBtn.onclick = ()=> fi.click();
+    fi.onchange = async (e)=>{
+      const f = e.target.files && e.target.files[0]; if(!f) return;
+      if(!/\.pdf$/i.test(f.name) && f.type !== "application/pdf"){ toast("本地模式仅支持 PDF"); return; }
+      cogReadingLocalBlob = f;
+      renderCogReading(); // 重新渲染：让 crFileBox 重置，并通过 renderCogReadingFile 走本地分支
+    };
+  }
+  if(upBtn){
+    upBtn.onclick = ()=> { closeCogBook && cogReadingBookId && openCogBook(cogReadingBookId); };
+  }
   // 加载文件
   renderCogReadingFile();
 }
 async function renderCogReadingFile(){
   const b = cogBooks.find(x=>x.id===cogReadingBookId);
   const box = $("#crFileBox"); if(!box) return;
+  // 先看是否有本次会话的本地 PDF（用户在阅读空间顶「📁 打开本地」选的）
+  if(cogReadingLocalBlob){
+    setFileState('📂 本地文件：'+(cogReadingLocalBlob.name||'已选')+'（仅本会话有效，不上传）', 'local');
+    try { await renderPdfBook(b, await cogReadingLocalBlob.arrayBuffer()); return; }
+    catch(e){ box.innerHTML = `<div class="empty">本地 PDF 加载失败：${esc(String(e.message||e))}</div>`; return; }
+  }
   if(!b || !b.file || !b.file.path){
-    // 兼容旧数据：早期用「PDF 链接」方式加入的书（无上传文件，仅有 b.pdfUrl）
+    // 兼容旧数据：早期用「PDF 链接」方式加入的书
     if(b && b.pdfUrl){
       box.innerHTML = `<div class="pdf-box"><iframe src="${esc(b.pdfUrl)}" allow="fullscreen"></iframe></div>
-        <div class="cog-hint">这是早期通过链接添加的 PDF（只读预览，暂不能选中批注）。建议重新「编辑书籍」用「上传文件」加入，即可选中段落写批注、跨端同步。</div>`;
+        <div class="cog-hint">这是早期通过链接添加的 PDF（只读预览，暂不能选中批注）。建议点上方「📁 打开本地 PDF」立即阅读，或重新「编辑书籍」用「上传文件」加入跨端同步。</div>`;
+      setFileState('🔗 仅 PDF 链接（只读，不可批注）', 'link');
       return;
     }
-    box.innerHTML = '<div class="empty">📎 本书暂无文件。点右上角「编辑书籍」上传 PDF / TXT / MD。</div>';
+    box.innerHTML = '<div class="empty">📎 这本书还没有文件。点上方「📁 打开本地 PDF」开始阅读，或返回书架「编辑书籍 → 上传文件」跨端同步。</div>';
+    setFileState('📎 暂无文件', 'none');
     return;
   }
+  setFileState('☁️ 云端文件：'+(b.file.name||'')+'，正在签名…', 'cloud');
   box.innerHTML = '<div class="cog-hint">正在加载文件...</div>';
   try {
     const j = await callBookSign(b.file.path);
@@ -3251,18 +3291,27 @@ async function renderCogReadingFile(){
     const type = (b.file.type || "").toLowerCase();
     if(type === "application/pdf" || /\.pdf$/i.test(b.file.name||"")){
       await renderPdfBook(b, url);
+      setFileState('☁️ 云端文件：'+(b.file.name||''), 'cloud');
     } else if(type.startsWith("text/") || /\.(txt|md)$/i.test(b.file.name||"")){
       const r = await fetch(url);
       const text = await r.text();
       box.innerHTML = `<div class="text-box"><pre>${esc(text)}</pre></div>
         <div class="cog-hint">文本已加载。</div>`;
+      setFileState('☁️ 云端文件：'+(b.file.name||'')+'（文本）', 'cloud');
     } else {
       box.innerHTML = `<div class="empty">不支持在线阅读的文件类型：${esc(type)}</div>`;
+      setFileState('⚠️ 不支持的文件类型', 'bad');
     }
   } catch(e){
     box.innerHTML = `<div class="empty">文件加载失败：${esc(String(e.message || e))}</div>`;
+    setFileState('❌ 加载失败', 'bad');
   }
 }
+function setFileState(text, kind){
+  const el = $("#crFileState"); if(el){ el.textContent = text; el.dataset.kind = kind||''; }
+  const upBtn = $("#crUploadFile"); if(upBtn && !cogReadingLocalBlob) upBtn.style.display = "";
+}
+let cogReadingLocalBlob = null;
 
 /* ---- PDF.js 内联阅读器（小说式：翻页 + 选中写批注） ---- */
 let _pdfjsPromise = null;
@@ -3281,7 +3330,8 @@ let pdfCurrentPage = 1;
 let pdfJumpTo = null;     // 从批注列表跳转指定页
 let _pdfSelBound = false;
 
-async function renderPdfBook(b, url){
+async function renderPdfBook(b, source){
+  // source 可以是 URL（云端）或 ArrayBuffer（本地）。统一成 arrayBuffer 给 getDocument。
   const lib = await ensurePdfJs();
   const box = $("#crFileBox");
   box.innerHTML = `<div class="pdf-reader">
@@ -3295,10 +3345,12 @@ async function renderPdfBook(b, url){
       <button id="pdfZoomOut" class="btn sm ghost">－</button>
       <span class="pdf-pageinfo" id="pdfZoomVal">140%</span>
       <button id="pdfZoomIn" class="btn sm ghost">＋</button>
+      <span style="flex:1;"></span>
+      <button id="pdfPageAnno" class="btn sm" title="对当前这一页写批注">📝 对本页写批注</button>
     </div>
     <div class="pdf-pages" id="pdfPages"><div class="cog-hint">正在渲染 PDF…</div></div>
   </div>`;
-  const data = await fetch(url).then(r=>r.arrayBuffer());
+  const data = source instanceof ArrayBuffer ? source : await fetch(source).then(r=>r.arrayBuffer());
   const doc = await lib.getDocument({ data }).promise;
   const total = doc.numPages;
   const startPage = Math.min(Math.max(1, pdfJumpTo||1), total);
@@ -3334,6 +3386,10 @@ async function renderPdfBook(b, url){
   $("#pdfZoomIn").onclick = ()=>{ scale=Math.min(3, scale+0.2); $("#pdfZoomVal").textContent=Math.round(scale*100)+'%'; renderPage(pdfCurrentPage); };
   $("#pdfZoomOut").onclick = ()=>{ scale=Math.max(0.6, scale-0.2); $("#pdfZoomVal").textContent=Math.round(scale*100)+'%'; renderPage(pdfCurrentPage); };
   $("#pdfZoomVal").textContent = Math.round(scale*100)+'%';
+  $("#pdfPageAnno").onclick = ()=>{
+    openCogAnno(null, b.id, '', pdfCurrentPage);
+    toast('已为第 '+pdfCurrentPage+' 页打开批注');
+  };
   await renderPage(startPage);
   bindPdfSelection(pagesEl, b);
 }
