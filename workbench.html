@@ -2944,7 +2944,7 @@ async function saveCogBook(){
         b.updatedAt = Date.now();
         saveCog(); renderCogHome(); renderCogBooks();
         toast("文件已上传");
-        if(isNew){ openCogReadingSpace(b.id); return; }
+        openCogReadingSpace(b.id); return;
       }
     } catch(e){
       toast("文件上传失败：" + (e.message || e));
@@ -3159,9 +3159,7 @@ function renderCogReading(){
     <div class="read-file-source">
       <span class="read-file-state" id="crFileState"></span>
       <div class="read-file-acts">
-        <button class="btn sm" id="crOpenLocal" title="不传云端，立即读取本机 PDF">📁 打开本地 PDF</button>
-        <button class="btn sm ghost" id="crUploadFile" title="上传到云端，跨设备可读"${b&&b.file&&b.file.path?'' : ' style="display:none;"'}>☁️ 上传</button>
-        <input type="file" id="crLocalFile" accept="application/pdf" style="display:none;">
+        <button class="btn sm ghost" id="crUploadFile" title="上传到云端，跨设备可读">☁️ 上传文件</button>
       </div>
     </div>
     <div class="read-status-row">
@@ -3243,20 +3241,10 @@ function renderCogReading(){
       };
     });
   }
-  // 文件来源切换（本地模式立即可读；上传则走云端）
-  cogReadingLocalBlob = null;
-  const openBtn = $("#crOpenLocal"), upBtn = $("#crUploadFile"), fi = $("#crLocalFile");
-  if(openBtn && fi){
-    openBtn.onclick = ()=> fi.click();
-    fi.onchange = async (e)=>{
-      const f = e.target.files && e.target.files[0]; if(!f) return;
-      if(!/\.pdf$/i.test(f.name) && f.type !== "application/pdf"){ toast("本地模式仅支持 PDF"); return; }
-      cogReadingLocalBlob = f;
-      renderCogReading(); // 重新渲染：让 crFileBox 重置，并通过 renderCogReadingFile 走本地分支
-    };
-  }
+  // 文件来源：云端（跨设备同步）。点「☁️ 上传文件」打开编辑弹窗加入文件。
+  const upBtn = $("#crUploadFile");
   if(upBtn){
-    upBtn.onclick = ()=> { closeCogBook && cogReadingBookId && openCogBook(cogReadingBookId); };
+    upBtn.onclick = ()=> { if(cogReadingBookId) openCogBook(cogReadingBookId); };
   }
   // 加载文件
   renderCogReadingFile();
@@ -3264,21 +3252,15 @@ function renderCogReading(){
 async function renderCogReadingFile(){
   const b = cogBooks.find(x=>x.id===cogReadingBookId);
   const box = $("#crFileBox"); if(!box) return;
-  // 先看是否有本次会话的本地 PDF（用户在阅读空间顶「📁 打开本地」选的）
-  if(cogReadingLocalBlob){
-    setFileState('📂 本地文件：'+(cogReadingLocalBlob.name||'已选')+'（仅本会话有效，不上传）', 'local');
-    try { await renderPdfBook(b, await cogReadingLocalBlob.arrayBuffer()); return; }
-    catch(e){ box.innerHTML = `<div class="empty">本地 PDF 加载失败：${esc(String(e.message||e))}</div>`; return; }
-  }
   if(!b || !b.file || !b.file.path){
     // 兼容旧数据：早期用「PDF 链接」方式加入的书
     if(b && b.pdfUrl){
       box.innerHTML = `<div class="pdf-box"><iframe src="${esc(b.pdfUrl)}" allow="fullscreen"></iframe></div>
-        <div class="cog-hint">这是早期通过链接添加的 PDF（只读预览，暂不能选中批注）。建议点上方「📁 打开本地 PDF」立即阅读，或重新「编辑书籍」用「上传文件」加入跨端同步。</div>`;
+        <div class="cog-hint">这是早期通过链接添加的 PDF（只读预览，暂不能选中批注）。建议点上方「☁️ 上传文件」重新加入本地文件，即可跨端同步并选中批注。</div>`;
       setFileState('🔗 仅 PDF 链接（只读，不可批注）', 'link');
       return;
     }
-    box.innerHTML = '<div class="empty">📎 这本书还没有文件。点上方「📁 打开本地 PDF」开始阅读，或返回书架「编辑书籍 → 上传文件」跨端同步。</div>';
+    box.innerHTML = '<div class="empty">📎 这本书还没有文件。点上方「☁️ 上传文件」选择 PDF / TXT / MD 加入云端，即可跨设备阅读与批注。</div>';
     setFileState('📎 暂无文件', 'none');
     return;
   }
@@ -3309,9 +3291,8 @@ async function renderCogReadingFile(){
 }
 function setFileState(text, kind){
   const el = $("#crFileState"); if(el){ el.textContent = text; el.dataset.kind = kind||''; }
-  const upBtn = $("#crUploadFile"); if(upBtn && !cogReadingLocalBlob) upBtn.style.display = "";
+  const upBtn = $("#crUploadFile"); if(upBtn) upBtn.style.display = "";
 }
-let cogReadingLocalBlob = null;
 
 /* ---- PDF.js 内联阅读器（小说式：翻页 + 选中写批注） ---- */
 let _pdfjsPromise = null;

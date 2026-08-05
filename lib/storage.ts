@@ -92,8 +92,9 @@ export async function createSignedUrl(
   }
   const j = (await res.json()) as { signedURL?: string };
   if (!j.signedURL) throw new HttpError(500, 'Storage 签名响应缺少 signedURL');
-  // signedURL 是相对路径（/storage/v1/object/sign/...token=...），要拼上项目根
-  return `${storageBase(env)}${j.signedURL}`;
+  // ⚠️ Supabase 签名接口返回的 signedURL 只是相对路径（/object/sign/...?token=...），
+  // 必须补上 /storage/v1 前缀才是浏览器可访问的完整 URL，否则会 404「requested path is invalid」。
+  return `${storageBase(env)}/storage/v1${j.signedURL}`;
 }
 
 /** 整个 buckets 列表（用于诊断，对象是否存在） */
