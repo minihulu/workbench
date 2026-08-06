@@ -249,17 +249,28 @@ function renderShell(mode, zoom = 1) {
   return fn(mode, zoom);
 }
 
-/** 执行真实的 renderPdfBook 首屏分支，返回被调用的渲染函数名 */
+/**
+ * 执行真实的 renderPdfBook 首屏分支，返回被调用的渲染函数名。
+ * 注：裸 vm context 没有 setTimeout（它是宿主 API，不属于 ECMAScript），
+ * 而首屏分支尾部有「续读 restore 结束后放开 pdfSuppressSave」的 600ms 兜底定时器，
+ * 故这里补一个记账用的 setTimeout 桩，否则会 ReferenceError。
+ */
 async function runInitBranch(mode) {
   const hit = [];
+  const timers = [];
   const ctx = {
     pdfMode: mode,
     layoutScroll: (...a) => hit.push(['layoutScroll', a[4]]),
     renderPage: async (...a) => hit.push(['renderPage', a[4]]),
     doc: {}, total: 20, pagesEl: {}, b: { id: 'bk' }, startPage: 7,
+    pdfSuppressSave: true,          // renderPdfBook 在进入本分支前已置 true
+    setTimeout: (fn, ms) => { timers.push({ fn, ms }); return timers.length; },
   };
   vm.createContext(ctx);
   await vm.runInContext(`(async function(){ ${REGION_INIT_BRANCH} })()`, ctx);
+  // 挂成不可枚举：H1/H3 用 deepEqual 逐字比对 hit 数组，多一个可枚举属性就会误判
+  Object.defineProperty(hit, 'timers', { value: timers, enumerable: false });
+  Object.defineProperty(hit, 'ctx', { value: ctx, enumerable: false });
   return hit;
 }
 
@@ -320,13 +331,15 @@ describe('H. renderPdfBook 首屏走滚动布局', () => {
   });
 
   test('H3 【端到端默认行为】不显式设置模式，直接用源码默认值 → 走 layoutScroll', async () => {
-    const ctx = { Set };
+    // setTimeout 是宿主 API，裸 vm context 里没有；首屏分支尾部的 pdfSuppressSave 兜底
+    // 定时器需要它（详见 runInitBranch 注释）
+    const ctx = { Set, setTimeout: (fn, ms) => 1 };
     vm.createContext(ctx);
     vm.runInContext(REGION_STATE, ctx);
     const hit = [];
     ctx.layoutScroll = (...a) => hit.push(['layoutScroll', a[4]]);
     ctx.renderPage = async (...a) => hit.push(['renderPage', a[4]]);
-    Object.assign(ctx, { doc: {}, total: 20, pagesEl: {}, b: { id: 'bk' }, startPage: 3 });
+    Object.assign(ctx, { doc: {}, total: 20, pagesEl: {}, b: { id: 'bk' }, startPage: 3, pdfSuppressSave: true });
     await vm.runInContext(`(async function(){ ${REGION_INIT_BRANCH} })()`, ctx);
     assert.deepEqual(hit, [['layoutScroll', 3]], '默认值链路断裂：默认模式没有进入滚动布局');
   });
