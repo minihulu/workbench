@@ -126,7 +126,7 @@ const TOOLBAR_SELECTORS = [
 function loadSandbox({ devicePixelRatio = 2 } = {}) {
   const calls = {
     render: [], layoutScroll: [], renderPage: [],
-    applyHighlights: [], saveBookProgress: [], highlightToc: [],
+    applyAnnos: [], applyHighlights: [], saveBookProgress: [], highlightToc: [],
     observed: [], disconnects: 0, timers: [], resizeListeners: [],
   };
 
@@ -173,7 +173,7 @@ function loadSandbox({ devicePixelRatio = 2 } = {}) {
   const prelude = `
     var __els = {};
     function $(sel){ return __els[sel] || null; }
-    function applyHighlights(a,b,c){ __calls.applyHighlights.push([b,c]); }
+    function applyAnnos(a,b){ __calls.applyAnnos.push([a,b]); }
     function saveBookProgress(b,n){ __calls.saveBookProgress.push([b&&b.id,n]); }
     function highlightTocCurrent(n){ __calls.highlightToc.push(n); }
     function setupScrollSpy(){}

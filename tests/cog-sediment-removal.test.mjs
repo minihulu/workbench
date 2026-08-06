@@ -38,15 +38,18 @@ function extractMainScript(src) {
 
 const SCRIPT = extractMainScript(HTML);
 
-/** 取 renderCogReading 中 body.innerHTML 模板到其闭合处的整段源码 */
+/** 取「书籍信息面板」模板（renderBookInfo，含 状态/进度/片段列表）到其闭合处的整段源码。
+ *  注意：读后沉淀移除 + T04 书架重构后，文件源预览(renderCogReading) 与 书籍信息面板(renderBookInfo)
+ *  已是两份独立模板。本文件关心的是「以 cogExcerptList 收尾」的那一份，故直接锚定 cogExcerptList。 */
 function readingTemplateRegion(src) {
-  const anchor = src.indexOf('id="crFileState"');
-  assert.notEqual(anchor, -1, '找不到阅读页模板锚点 crFileState');
-  const start = src.lastIndexOf('body.innerHTML = `', anchor);
-  assert.notEqual(start, -1, '找不到阅读页模板起始 body.innerHTML = `');
+  const cogList = src.indexOf('id="cogExcerptList"');
+  assert.notEqual(cogList, -1, '找不到 cogExcerptList（删除范围过大）');
+  // 向前找最近的 box.innerHTML = ` 模板起点（renderBookInfo 的面板模板）
+  const start = src.lastIndexOf('box.innerHTML = `', cogList);
+  assert.notEqual(start, -1, '找不到书籍信息面板模板起始 box.innerHTML = `');
   // 模板以「反引号 + 分号」闭合
-  const end = src.indexOf('`;', start + 'body.innerHTML = `'.length);
-  assert.notEqual(end, -1, '找不到阅读页模板的闭合 `;');
+  const end = src.indexOf('`;', start + 'box.innerHTML = `'.length);
+  assert.notEqual(end, -1, '找不到书籍信息面板模板的闭合 `;');
   return src.slice(start, end + 2);
 }
 
@@ -141,7 +144,10 @@ describe('C 阅读页模板字符串完整闭合', () => {
       SCRIPT.indexOf('id="cogExcerptList"')
     );
     assert.ok(after.includes('$("#crStatus").value'), '模板之后的状态回填代码丢失');
-    assert.ok(after.includes('$("#crProgSave").onclick'), '模板之后的进度保存绑定丢失');
+    // P0 把 crProgSave 改为条件渲染 + 空值保护：按钮仅在 !auto 时渲染，
+    // 绑定写成 `const ps = $("#crProgSave"); if(ps) ps.onclick = saveCogProgress;`
+    // （不再是字面量 `$("#crProgSave").onclick = saveCogProgress`）。放宽成「就近出现 onclick=saveCogProgress」。
+    assert.ok(/#crProgSave[\s\S]{0,80}onclick\s*=\s*saveCogProgress/.test(after), '模板之后的进度保存绑定丢失');
   });
 });
 
@@ -152,7 +158,7 @@ describe('D 认知资产阅读页既有功能完好', () => {
   const CASES = [
     ['crStatus', '$("#crStatus").onchange = saveCogProgress'],
     ['crProg', 'progEl.onchange = saveCogProgress'],
-    ['crProgSave', '$("#crProgSave").onclick = saveCogProgress'],
+    ['crProgSave', 'const ps = $("#crProgSave"); if(ps) ps.onclick = saveCogProgress'],
     ['crPos', '$("#crPos").onblur = saveCogProgress'],
     ['crExcerpt', '$("#crExcerpt").value.trim()'],
     ['crExcerptAdd', '$("#crExcerptAdd").onclick'],

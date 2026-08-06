@@ -51,10 +51,12 @@ const REGION_CORE = sliceBetween(
   'core'
 );
 // 区块 2：文字层
+// buildTextLayer 在「PDF 批注」改动中新增了第 3 个参数 page（写 data-page，供批注按页寻址）。
+// 结束标记同步改为 AnchorEngine 的入口 getPageLayer —— 旧的 bindPdfSelection 已被移到更后面。
 const REGION_TEXTLAYER = sliceBetween(
   HTML,
-  'function buildTextLayer(textContent, viewport){',
-  'function bindPdfSelection(',
+  'function buildTextLayer(textContent, viewport, page){',
+  'function getPageLayer(',
   'textLayer'
 );
 
@@ -137,7 +139,7 @@ function loadSandbox(opts = {}) {
     render: [],          // page.render 收到的 viewport
     textLayer: [],       // buildTextLayer 收到的 viewport
     resizeListeners: [], // window.addEventListener('resize', ...)
-    applyHighlights: [],
+    applyAnnos: [],
     saveBookProgress: [],
     highlightToc: [],
     timers: [],
@@ -207,7 +209,7 @@ ${REGION_STATE}
     // ── 被测区块外部依赖的函数：桩 ──
     var __els={};
     function $(sel){ return __els[sel] || null; }
-    function applyHighlights(a,b,c){ __calls.applyHighlights.push([a&&a.tagName,b,c]); }
+    function applyAnnos(a,b){ __calls.applyAnnos.push([a,b]); }
     function saveBookProgress(b,n){ __calls.saveBookProgress.push([b&&b.id,n]); }
     function highlightTocCurrent(n){ __calls.highlightToc.push(n); }
     function setupScrollSpy(){}
@@ -302,7 +304,7 @@ describe('A. 语法、双文件一致性与静态不变量', () => {
   test('A4 高清渲染写法出现次数正确（单页 + 滚动各一处）', () => {
     const count = (re) => (HTML.match(re) || []).length;
     assert.equal(count(/viewport:\s*rVp/g), 2, 'render 必须用物理 viewport rVp');
-    assert.equal(count(/buildTextLayer\(\s*textContent\s*,\s*lVp\s*\)/g), 2, '文字层必须用逻辑 viewport lVp');
+    assert.equal(count(/buildTextLayer\(\s*textContent\s*,\s*lVp\s*,\s*n\s*\)/g), 2, '文字层必须用逻辑 viewport lVp');
     assert.equal(count(/getViewport\(\{\s*scale:\s*pdfScale\s*\}\)/g), 2);
     assert.equal(count(/getViewport\(\{\s*scale:\s*pdfScale\s*\*\s*dpr\s*\}\)/g), 2);
     assert.equal(count(/pdfDprFor\(lVp\)/g), 2, 'dpr 必须基于逻辑尺寸计算上限');
@@ -628,7 +630,7 @@ describe('C. 渲染用 rVp、文字层用 lVp —— 端到端不变量', () => 
     assert.equal(env.api.get('pdfCurrentPage'), 12);
     assert.equal(info.textContent, '第 12 / 42 页');
     assert.deepEqual(plain(env.calls.highlightToc), [12]);
-    assert.deepEqual(plain(env.calls.applyHighlights), [['DIV', 'bk9', 12]]);
+    assert.deepEqual(plain(env.calls.applyAnnos), [['bk9', 12]]);
     assert.deepEqual(plain(env.calls.saveBookProgress), [['bk9', 12]]);
   });
 
@@ -956,7 +958,7 @@ describe('E. pdfEvictFarPages 不误伤', () => {
 describe('F. 既有功能符号与调用链完整性', () => {
   const REQUIRED_FNS = [
     'buildTocDom', 'resolveOutlinePage', 'pdfGoToPage', 'saveBookProgress',
-    'setupScrollSpy', 'applyHighlights', 'bindPdfSelection', 'buildTextLayer',
+    'setupScrollSpy', 'applyAnnos', 'bindPdfSelection', 'buildTextLayer',
     'highlightTocCurrent', 'loadPdfOutline', 'bindPdfToolbar', 'layoutScroll',
     'updatePdfPageInfo', 'renderPage', 'renderScrollPage',
   ];
@@ -970,7 +972,7 @@ describe('F. 既有功能符号与调用链完整性', () => {
 
   test('F2 关键调用链未断（定义之外仍有调用点）', () => {
     const callsites = {
-      buildTextLayer: 2, applyHighlights: 2, saveBookProgress: 2,
+      buildTextLayer: 2, applyAnnos: 2, saveBookProgress: 2,
       setupScrollSpy: 1, bindPdfSelection: 1, highlightTocCurrent: 3,
       pdfGoToPage: 2, resolveOutlinePage: 1, buildTocDom: 2,
       pdfCacheGet: 1, pdfCachePut: 2, refreshPdfCache: 1,
