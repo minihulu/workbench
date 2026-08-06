@@ -319,16 +319,10 @@
   .idea-link-note{margin-top:14px; font-size:12.5px; color:var(--txt2); background:var(--chip); border-radius:10px; padding:9px 12px; line-height:1.6;}
 
   /* 认知资产：App 式画面跳转（首页 hub → 阅读/书籍/思想/复盘/阅读空间/我的思考/英语表达） */
+  /* 屏位数量由 --cog-n 统一驱动，transform 交给 JS 计算（setCogScreen），加屏只需改 COG_SCREEN_COUNT */
   .cog-stack{overflow:hidden;}
-  .cog-track{display:flex; width:800%; transition:transform .28s cubic-bezier(.4,0,.2,1);}
-  .cog-screen{width:12.5%; flex:0 0 12.5%;}
-  .cog-track.show-1{transform:translateX(-12.5%);}
-  .cog-track.show-2{transform:translateX(-25%);}
-  .cog-track.show-3{transform:translateX(-37.5%);}
-  .cog-track.show-4{transform:translateX(-50%);}
-  .cog-track.show-5{transform:translateX(-62.5%);}
-  .cog-track.show-6{transform:translateX(-75%);}
-  .cog-track.show-7{transform:translateX(-87.5%);}
+  .cog-track{display:flex; width:calc(100% * var(--cog-n, 9)); transition:transform .28s cubic-bezier(.4,0,.2,1);}
+  .cog-screen{width:calc(100% / var(--cog-n, 9)); flex:0 0 calc(100% / var(--cog-n, 9));}
   .cog-stack .fab{display:none;}
   .cog-track.show-1 #cogReadFab{display:block;}
   .cog-track.show-2 #cogBookFab{display:block;}
@@ -390,17 +384,29 @@
   .cog-cont-d{font-size:12px; color:var(--txt2); margin-top:3px;}
   @media(max-width:880px){ .cog-dash{grid-template-columns:1fr;} .cog-continue{grid-template-columns:1fr;} }
 
-  /* ===== 我的书架（首页预览 + 书籍库屏，复用同一卡片） ===== */
-  .shelf{display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px;}
-  .book-card{position:relative; display:flex; flex-direction:column; gap:8px; padding:12px; border-radius:14px; border:1px solid var(--line); background:var(--card); box-shadow:var(--shadow); cursor:pointer; transition:.15s; overflow:hidden;}
-  .book-card:hover{border-color:var(--brand); transform:translateY(-2px);}
-  .book-cover{width:100%; height:96px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:46px; background:linear-gradient(135deg,#6C5CE7,#0984E3); color:#fff;}
-  .book-title{font-weight:700; font-size:13.5px; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
-  .book-author{font-size:11.5px; color:var(--txt2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  /* ===== 我的书架（小说风竖版封面网格：首页预览 + 书籍库屏共用） ===== */
+  .shelf{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:16px 14px;}
+  .book-card{position:relative; display:flex; flex-direction:column; gap:7px; cursor:pointer; transition:.16s; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;}
+  .book-card:hover{transform:translateY(-3px);}
+  /* 2:3 竖版封面：aspect-ratio 为主，padding-top 兜底（Safari<15） */
+  .book-cover{position:relative; width:100%; aspect-ratio:2/3; border-radius:10px; overflow:hidden; display:flex; align-items:center; justify-content:center; font-size:52px; color:#fff; background:linear-gradient(150deg,#6C5CE7,#0984E3); box-shadow:0 6px 18px rgba(0,0,0,.22); transition:.16s;}
+  @supports not (aspect-ratio: 2 / 3){ .book-cover{height:0; padding-top:150%;} .book-cover > *{position:absolute;} }
+  .book-card:hover .book-cover{box-shadow:0 10px 26px rgba(0,0,0,.3);}
+  .book-cover .bc-emoji{display:flex; align-items:center; justify-content:center; inset:0; width:100%; height:100%; line-height:1;}
+  .book-cover .bc-img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover;}
+  .book-cover .bc-letter{display:flex; align-items:center; justify-content:center; inset:0; width:100%; height:100%; font-size:44px; font-weight:800; letter-spacing:2px; text-shadow:0 2px 8px rgba(0,0,0,.28);}
+  /* 封面底部进度条（悬在封面上，不占卡片高度） */
+  .book-cover .bc-prog{position:absolute; left:0; right:0; bottom:0; height:16px; background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.55)); display:flex; align-items:flex-end;}
+  .book-cover .bc-bar{position:absolute; left:0; bottom:0; height:3px; background:linear-gradient(90deg,#74B9FF,#0984E3);}
+  .book-cover .bc-pct{position:absolute; right:5px; bottom:2px; font-size:10px; font-weight:700; color:#fff; text-shadow:0 1px 3px rgba(0,0,0,.6);}
+  .book-badge{position:absolute; top:6px; left:6px; background:rgba(0,0,0,.55); color:#fff; font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:999px; backdrop-filter:blur(3px);}
+  .book-title{font-weight:700; font-size:13px; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+  .book-author{font-size:11px; color:var(--txt2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .book-prog{height:7px; border-radius:999px; background:var(--bg2); overflow:hidden;}
   .book-prog > i{display:block; height:100%; border-radius:999px; background:linear-gradient(90deg,#74B9FF,#0984E3);}
   .book-meta{display:flex; justify-content:space-between; font-size:11px; color:var(--txt2);}
   .book-meta b{color:var(--brand); font-weight:800;}
+  @media(max-width:760px){ .shelf{grid-template-columns:repeat(3,1fr); gap:14px 10px;} .book-cover{font-size:40px;} .book-cover .bc-letter{font-size:34px;} }
 
   /* ===== 阅读空间（屏5） ===== */
   .read-head{display:flex; gap:14px; align-items:center; padding:6px 0 14px;}
@@ -451,8 +457,7 @@
   .pdf-main{flex:1; min-width:0; display:flex; flex-direction:column;}
   .pdf-toc{width:240px; flex:0 0 240px; background:var(--bg2); border-right:1px solid var(--line); display:flex; flex-direction:column; max-height:78vh;}
   .pdf-toc.hidden{display:none;}
-  .pdf-toc-head{padding:10px 12px; font-weight:600; font-size:13px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--bg2); z-index:2;}
-  .pdf-toc-list{flex:1; overflow-y:auto; padding:6px 4px 16px;}
+  .pdf-toc-list{flex:1; min-height:0; overflow-y:auto; padding:6px 4px 16px;}
   .toc-item{font-size:13px;}
   .toc-title{display:block; padding:6px 10px; border-radius:6px; cursor:pointer; color:var(--txt); line-height:1.4; word-break:break-word;}
   .toc-title:hover{background:var(--hl);}
@@ -461,6 +466,30 @@
   .toc-page{float:right; color:var(--txt2); font-size:11px; margin-left:10px;}
   .toc-title.active .toc-page{color:rgba(255,255,255,.8);}
   .toc-empty{padding:14px 12px; color:var(--txt2); font-size:12.5px;}
+  /* 侧栏双 Tab：📑 目录 / 🖍 批注（阅读器内批注侧栏） */
+  .pdf-toc-tabs{display:flex; border-bottom:1px solid var(--line); background:var(--bg2); flex:none;}
+  .pdf-toc-tab{flex:1; min-width:0; padding:9px 4px; font-size:12.5px; font-weight:600; color:var(--txt2); background:transparent; border:0; border-bottom:2px solid transparent; border-radius:0; cursor:pointer; white-space:nowrap;}
+  .pdf-toc-tab:hover{background:var(--hl);}
+  .pdf-toc-tab.active{color:var(--brand); background:var(--card); border-bottom-color:var(--brand);}
+  .pdf-toc-tab .anno-count{display:inline-block; min-width:16px; margin-left:5px; padding:0 5px; font-size:10.5px; font-weight:700; line-height:15px; color:#fff; background:var(--brand); border-radius:999px; vertical-align:middle;}
+  .pdf-toc-tab .anno-count:empty{display:none;}
+  .pdf-toc-body{flex:1; min-height:0; display:flex; flex-direction:column;}
+  .pdf-toc-pane{flex:1; min-height:0; display:flex; flex-direction:column;}
+  .pdf-anno-filter{display:flex; gap:4px; padding:7px 8px; border-bottom:1px solid var(--line); flex:none;}
+  .pdf-anno-filter button{flex:1; min-width:0; padding:4px 0; font-size:12px; color:var(--txt2); background:var(--card); border:1px solid var(--line); border-radius:7px; cursor:pointer;}
+  .pdf-anno-filter button:hover{background:var(--hl);}
+  .pdf-anno-filter button.active{color:#fff; background:var(--brand); border-color:var(--brand);}
+  /* 复用认知资产的 .anno 卡片样式，仅按侧栏窄宽度做紧凑化覆盖 */
+  .pdf-anno-list{padding:8px;}
+  .pdf-anno-list .anno{padding:9px 10px; border-radius:10px; margin-bottom:8px; box-shadow:none;}
+  .pdf-anno-list .anno .a-book{margin-bottom:5px;}
+  .pdf-anno-list .anno .a-orig{font-size:12px; line-height:1.55; margin-bottom:6px; max-height:58px; overflow:hidden;}
+  .pdf-anno-list .anno .a-under{font-size:12.5px; line-height:1.55; word-break:break-word;}
+  .pdf-anno-list .anno .a-acts{margin-top:7px; gap:6px;}
+  .pdf-anno-list .anno .a-acts .btn{padding:2px 9px; font-size:12px;}
+  /* 从批注列表跳页后，对应正文标记闪一下，帮用户定位 */
+  @keyframes annoFlash { 0%{box-shadow:0 0 0 3px #f5a62388;} 100%{box-shadow:0 0 0 3px transparent;} }
+  .anno-flash{animation:annoFlash 1.2s ease-out;}
   @media (max-width: 760px){
     .pdf-reader{position:relative;}
     .pdf-toc{display:none; position:absolute; left:0; top:0; bottom:0; z-index:30; width:80%; max-width:300px; box-shadow:3px 0 16px rgba(0,0,0,.25);}
@@ -480,17 +509,59 @@
   .pdf-sel-btn{position:absolute; z-index:50; transform:translate(-50%,-130%); background:var(--brand); color:#fff; border:0; border-radius:8px; padding:6px 10px; font-size:12.5px; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.3); white-space:nowrap;}
   .pdf-sel-btn::after{content:""; position:absolute; left:50%; top:100%; transform:translateX(-50%); border:6px solid transparent; border-top-color:var(--brand);}
   .pdf-sel-btn:hover{filter:brightness(1.08);}
-  /* 选中文字浮条：高亮 / 批注 双按钮 */
-  .pdf-sel-row{position:absolute; z-index:50; transform:translate(-50%,-135%); display:flex; gap:6px; background:#fff; border-radius:10px; padding:5px; box-shadow:0 6px 18px rgba(0,0,0,.32);}
-  .pdf-sel-row::after{content:""; position:absolute; left:50%; top:100%; transform:translateX(-50%); border:6px solid transparent; border-top-color:#fff;}
-  .pdf-sel-row button{border:0; border-radius:7px; padding:6px 11px; font-size:12.5px; cursor:pointer; color:#fff; white-space:nowrap;}
+  /* 选中文字浮条：🖍高亮 / 💬评论 / 💡想法 / 📋复制 / ✕
+     position:fixed —— 与 getBoundingClientRect() 同为视口坐标系，页面滚动不错位 */
+  .pdf-sel-row{position:fixed; z-index:2200; display:flex; gap:5px; background:#fff; border-radius:11px; padding:5px; box-shadow:0 8px 24px rgba(0,0,0,.34); border:1px solid rgba(0,0,0,.06);}
+  .pdf-sel-row button{border:0; border-radius:8px; padding:7px 10px; font-size:12.5px; line-height:1.2; min-height:34px; cursor:pointer; color:#fff; white-space:nowrap;}
+  .pdf-sel-row button:hover{filter:brightness(1.08);}
   .pdf-sel-row .b-hl{background:#f59e0b;}
-  .pdf-sel-row .b-hl:hover{filter:brightness(1.06);}
-  .pdf-sel-row .b-an{background:var(--brand);}
-  .pdf-sel-row .b-an:hover{filter:brightness(1.08);}
-  /* PDF 文字层高亮（划词高亮持久化） */
-  .pdf-page .textLayer span.hl{background:rgba(245,158,11,.42); border-radius:2px; cursor:pointer;}
-  .pdf-page .textLayer span.hl:hover{background:rgba(245,158,11,.7);}
+  .pdf-sel-row .b-cm{background:var(--brand);}
+  .pdf-sel-row .b-id{background:#10b981;}
+  .pdf-sel-row .b-cp{background:#0984E3;}
+  .pdf-sel-row .b-x{background:#94a3b8; padding:7px 9px;}
+  @media(max-width:760px){ .pdf-sel-row button{min-height:44px; padding:9px 12px; font-size:13.5px;} }
+  /* PDF 文字层批注上色：5 色静态规则（禁止 inline style，否则会盖掉 :hover 且重绘需逐个清理） */
+  .pdf-page .textLayer span.anno{border-radius:2px; cursor:pointer; padding:0; border:0; margin:0; box-shadow:none;}
+  .pdf-page .textLayer span.anno[data-color="yellow"]{background:rgba(245,158,11,.42);}
+  .pdf-page .textLayer span.anno[data-color="yellow"]:hover{background:rgba(245,158,11,.70);}
+  .pdf-page .textLayer span.anno[data-color="green"]{background:rgba(16,185,129,.35);}
+  .pdf-page .textLayer span.anno[data-color="green"]:hover{background:rgba(16,185,129,.62);}
+  .pdf-page .textLayer span.anno[data-color="blue"]{background:rgba(9,132,227,.32);}
+  .pdf-page .textLayer span.anno[data-color="blue"]:hover{background:rgba(9,132,227,.58);}
+  .pdf-page .textLayer span.anno[data-color="pink"]{background:rgba(232,67,147,.32);}
+  .pdf-page .textLayer span.anno[data-color="pink"]:hover{background:rgba(232,67,147,.58);}
+  .pdf-page .textLayer span.anno[data-color="purple"]{background:rgba(108,92,231,.32);}
+  .pdf-page .textLayer span.anno[data-color="purple"]:hover{background:rgba(108,92,231,.58);}
+  /* 角标覆盖层：textLayer 的 span 带 matrix 变换，::after 会被一起缩放，必须独立成层 */
+  .pdf-page .annoMarkers{position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:3;}
+  .pdf-page .anno-dot{position:absolute; width:15px; height:15px; border-radius:50%; color:#fff; font-size:9px; line-height:15px; text-align:center; pointer-events:auto; cursor:pointer; box-shadow:0 1px 4px rgba(0,0,0,.35);}
+  .pdf-page .anno-dot:hover{transform:scale(1.15);}
+  /* 批注气泡（查看/编辑/换色/删除） */
+  .anno-pop{position:fixed; z-index:2300; width:min(300px,92vw); background:var(--card); border:1px solid var(--line); border-radius:13px; box-shadow:0 12px 32px rgba(0,0,0,.28); padding:12px 13px; font-size:13px;}
+  .anno-pop .ap-quote{font-size:12px; color:var(--txt2); border-left:3px solid var(--line); padding-left:8px; margin-bottom:8px; line-height:1.55; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+  .anno-pop .ap-text{font-size:13.5px; line-height:1.6; white-space:pre-wrap; word-break:break-word; max-height:150px; overflow:auto;}
+  .anno-pop .ap-empty{font-size:12.5px; color:var(--txt2); font-style:italic;}
+  .anno-pop .ap-acts{display:flex; align-items:center; gap:6px; margin-top:10px; flex-wrap:wrap;}
+  .anno-pop .ap-acts .btn{padding:4px 9px; font-size:12px;}
+  /* 5 色圆点选择条（气泡 + 编辑弹窗共用） */
+  .color-dots{display:flex; gap:7px; align-items:center;}
+  .color-dots .cd{width:22px; height:22px; border-radius:50%; border:2px solid transparent; cursor:pointer; padding:0; flex:none; transition:.12s;}
+  .color-dots .cd:hover{transform:scale(1.12);}
+  .color-dots .cd.active{border-color:var(--txt); box-shadow:0 0 0 2px var(--card) inset;}
+  /* 轻量批注编辑弹窗 */
+  .anno-editor .ae-quote{font-size:13px; color:var(--txt2); background:var(--bg2); border-left:3px solid var(--brand); border-radius:0 8px 8px 0; padding:9px 11px; margin-bottom:12px; line-height:1.6; white-space:pre-wrap; word-break:break-word; max-height:140px; overflow:auto;}
+  .anno-editor .ae-row{display:flex; align-items:center; gap:10px; margin-top:12px; flex-wrap:wrap;}
+  .anno-editor .ae-lab{font-size:12px; font-weight:700; color:var(--txt2);}
+  /* 书架长按 / 右键管理菜单 */
+  .book-menu{position:fixed; z-index:2400; min-width:170px; background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:0 12px 32px rgba(0,0,0,.3); padding:6px; overflow:hidden;}
+  .book-menu .bm-t{font-size:11.5px; color:var(--txt2); padding:6px 10px 4px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:220px;}
+  .book-menu button{display:block; width:100%; text-align:left; border:0; background:none; color:var(--txt); font-size:13.5px; padding:9px 11px; border-radius:8px; cursor:pointer;}
+  .book-menu button:hover{background:var(--bg2);}
+  .book-menu button.danger{color:#c0392b;}
+  /* 封面选择弹窗 */
+  .cover-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(46px,1fr)); gap:8px; margin-top:8px;}
+  .cover-grid button{font-size:24px; padding:7px 0; border:1px solid var(--line); border-radius:10px; background:var(--bg2); cursor:pointer;}
+  .cover-grid button:hover{border-color:var(--brand);}
   .pdf-page-slot{display:block; margin:0 auto 14px; background:#fff; box-shadow:0 2px 12px rgba(0,0,0,.35); position:relative; min-height:70vh;}
   .pdf-pages.scroll{text-align:center;}
   /* 小屏：压缩阅读区内边距，把宽度尽量让给页面本身（放在 .pdf-pages 之后，保证覆盖生效） */
@@ -1211,6 +1282,16 @@
             <div id="cogExprList" style="margin-top:12px;"></div>
             <button class="fab" id="cogExprFab" title="添加表达">＋</button>
           </div>
+
+          <!-- 屏 8：书籍信息（承接原屏5 的表单：状态 / 进度 / 位置 / 文件 / 片段） -->
+          <div class="cog-screen">
+            <div class="dj-topbar">
+              <button class="back-btn" data-cog-back>‹ 返回</button>
+              <span class="app-title">📖 书籍信息</span>
+              <button class="btn sm" id="cogBookInfoRead" style="margin-left:auto;">▶ 继续阅读</button>
+            </div>
+            <div id="cogBookInfoBody" style="margin-top:12px;"></div>
+          </div>
         </div>
       </div>
 
@@ -1371,6 +1452,42 @@
             <button class="btn ghost" id="cogAnnoDelete" style="margin-right:auto;color:#c0392b;">🗑 删除</button>
             <button class="btn ghost" id="cogAnnoCancel">取消</button>
             <button class="btn" id="cogAnnoSave">💾 保存</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 轻量批注编辑弹窗（评论 / 想法） -->
+      <div class="modal" id="annoEditorModal">
+        <div class="modal-box card anno-editor" style="width:min(520px,94vw);padding:22px;">
+          <h2 id="aeTitle" style="margin-bottom:4px;">💬 写评论</h2>
+          <p class="sub" style="margin-bottom:14px;">记下这段文字带给你的想法，会同步到「我的读书思考」。</p>
+          <div class="ae-quote" id="aeQuote"></div>
+          <label class="fld">我的批注</label>
+          <textarea id="aeText" placeholder="写下你的理解、疑问或联想……"></textarea>
+          <div class="ae-row">
+            <span class="ae-lab">颜色</span>
+            <div class="color-dots" id="aeColors"></div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end;align-items:center;">
+            <button class="btn ghost" id="aeDelete" style="margin-right:auto;color:#c0392b;">🗑 删除</button>
+            <button class="btn ghost" id="aeCancel">取消</button>
+            <button class="btn" id="aeSave">💾 保存</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 换封面 -->
+      <div class="modal" id="coverPickModal">
+        <div class="modal-box card" style="width:min(460px,94vw);padding:22px;">
+          <h2 style="margin-bottom:4px;">🖼 换封面</h2>
+          <p class="sub" style="margin-bottom:14px;">选一个 emoji，或填一张图片地址。</p>
+          <div class="cover-grid" id="cpGrid"></div>
+          <label class="fld" style="margin-top:16px;">图片地址（可选，https:// 或 data:）</label>
+          <input id="cpUrl" placeholder="https://example.com/cover.jpg">
+          <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end;align-items:center;">
+            <button class="btn ghost" id="cpClear" style="margin-right:auto;">恢复默认</button>
+            <button class="btn ghost" id="cpCancel">取消</button>
+            <button class="btn" id="cpSave">💾 保存</button>
           </div>
         </div>
       </div>
@@ -1894,6 +2011,10 @@ document.addEventListener("keydown", e=>{ if(e.key!=="Escape") return;
   if($("#cogReadModal").classList.contains("open")) closeCogRead();
   else if($("#cogBookModal").classList.contains("open")) closeCogBook();
   else if($("#cogBookDetailModal").classList.contains("open")) closeCogBookDetail();
+  else if($("#annoEditorModal").classList.contains("open")) closeAnnoEditor();
+  else if($("#coverPickModal").classList.contains("open")) closeCoverPick();
+  else if(document.querySelector(".anno-pop")) closeAnnoPopover();
+  else if(document.querySelector(".book-menu")) closeBookMenu();
   else if($("#cogThoughtModal").classList.contains("open")) closeCogThought();
   else if($("#cogReviewModal").classList.contains("open")) closeCogReview();
   else if($("#dirModal").classList.contains("open")) closeModal("#dirModal");
@@ -2626,8 +2747,110 @@ let cogBooks = LS.get("wb_cog_books", []);
 let cogThoughts = LS.get("wb_cog_thoughts", []);
 let cogReviews = LS.get("wb_cog_reviews", []);
 let cogExpr = LS.get("wb_cog_expr", []);   // 英语表达资产（V2 阅读入口）
-function persistCog(){ LS.set("wb_cog_reads", cogReads); LS.set("wb_cog_books", cogBooks); LS.set("wb_cog_thoughts", cogThoughts); LS.set("wb_cog_reviews", cogReviews); LS.set("wb_cog_expr", cogExpr); }
+let cogAnnos = LS.get("wb_cog_annos", []); // PDF 批注（顶层独立数组，与 cogReads/cogBooks 平级）
+function persistCog(){ LS.set("wb_cog_reads", cogReads); LS.set("wb_cog_books", cogBooks); LS.set("wb_cog_thoughts", cogThoughts); LS.set("wb_cog_reviews", cogReviews); LS.set("wb_cog_expr", cogExpr); LS.set("wb_cog_annos", cogAnnos); }
 function saveCog(){ persistCog(); scheduleSync(); }
+
+/* ============ AnnoStore：PDF 批注存储层 ============
+   分层约定：交互层只调这里的语义方法，绝不直接改 cogAnnos 数组。
+   CogAnno 字段契约见 docs/system_design.md 3.1。时间戳用 createdAt/updatedAt（老数组用 created，别混）。 */
+const ANNO_TYPES = ["highlight", "comment", "idea"];
+const ANNO_COLORS = {
+  yellow: { fill:'rgba(245,158,11,.42)', hover:'rgba(245,158,11,.70)', dot:'#f59e0b', label:'黄' },
+  green : { fill:'rgba(16,185,129,.35)', hover:'rgba(16,185,129,.62)', dot:'#10b981', label:'绿' },
+  blue  : { fill:'rgba(9,132,227,.32)',  hover:'rgba(9,132,227,.58)',  dot:'#0984E3', label:'蓝' },
+  pink  : { fill:'rgba(232,67,147,.32)', hover:'rgba(232,67,147,.58)', dot:'#e84393', label:'粉' },
+  purple: { fill:'rgba(108,92,231,.32)', hover:'rgba(108,92,231,.58)', dot:'#6C5CE7', label:'紫' }
+};
+const ANNO_COLOR_DEFAULT = "yellow";   // 与旧高亮橙黄一致，迁移无视觉断层
+const ANNO_TYPE_ICON = { highlight:"🖍", comment:"💬", idea:"💡" };
+let lastAnnoColor = LS.get("wb_anno_color", ANNO_COLOR_DEFAULT);
+if(!ANNO_COLORS[lastAnnoColor]) lastAnnoColor = ANNO_COLOR_DEFAULT;
+function setLastAnnoColor(c){ if(ANNO_COLORS[c]){ lastAnnoColor = c; LS.set("wb_anno_color", c); } }
+
+function persistAnnos(){ LS.set("wb_cog_annos", cogAnnos); }
+function saveAnnos(){ persistAnnos(); scheduleSync(); }
+/** 取某本书某一页的有效批注（已过滤软删）。page 传 null 表示不按页过滤。 */
+function annosOf(bookId, page){
+  return cogAnnos.filter(a=> a && !a.deleted && a.bookId===bookId && (page==null || Number(a.page)===Number(page)));
+}
+/** 全书有效批注数（书架徽标用） */
+function annoCountOfBook(bookId){ return annosOf(bookId, null).length; }
+/** 单页有效批注数（页徽标用） */
+function annoCountOf(bookId, page){ return annosOf(bookId, page).length; }
+function getAnno(id){ return cogAnnos.find(a=> a && a.id===id) || null; }
+/** 新增批注：补齐 id / 时间戳 / deviceId 后入库并落盘 */
+function addAnno(draft){
+  const d = draft || {};
+  const now = Date.now();
+  const rec = {
+    id: uid(),
+    bookId: d.bookId || "",
+    page: Number(d.page || 0),
+    startOffset: (d.startOffset==null ? -1 : Number(d.startOffset)),
+    endOffset: (d.endOffset==null ? -1 : Number(d.endOffset)),
+    pageTextLen: Number(d.pageTextLen || 0),
+    selectedText: d.selectedText || "",
+    type: ANNO_TYPES.includes(d.type) ? d.type : "highlight",
+    color: ANNO_COLORS[d.color] ? d.color : ANNO_COLOR_DEFAULT,
+    text: d.text || "",
+    exprId: d.exprId || "",
+    createdAt: now, updatedAt: now, deviceId, deleted: false
+  };
+  cogAnnos.push(rec);
+  saveAnnos();
+  return rec;
+}
+/** 更新批注：自动刷新 updatedAt */
+function updateAnno(id, patch){
+  const a = getAnno(id); if(!a) return null;
+  Object.assign(a, patch || {}, { updatedAt: Date.now(), deviceId });
+  if(!ANNO_COLORS[a.color]) a.color = ANNO_COLOR_DEFAULT;
+  saveAnnos();
+  return a;
+}
+/** 软删批注（与 delCogRead/delCogBook 一致的软删语义） */
+function removeAnno(id){
+  cogAnnos = cogAnnos.map(a=> a.id===id ? Object.assign({}, a, {deleted:true, updatedAt:Date.now(), deviceId}) : a);
+  saveAnnos();
+}
+/** 旧高亮一次性迁移：cogReads[kind=annotation] → cogAnnos。
+    id 由旧 id 确定性推导（"mg_"+旧id），多端各自迁移产出同一 id，mergeRecords 天然幂等去重。
+    旧记录不删，只打 migratedToAnno 标记（多端半迁移场景下，删除不可逆、标记可逆）。 */
+function migrateHighlightsToAnnos(){
+  const src = cogReads.filter(r=> r && !r.deleted && r.kind==="annotation" && !r.migratedToAnno);
+  if(!src.length) return 0;
+  const exist = {};
+  cogAnnos.forEach(a=>{ if(a && a.id) exist[a.id] = true; });
+  let n = 0, now = Date.now();
+  src.forEach(r=>{
+    const mid = "mg_" + r.id;
+    r.migratedToAnno = true; r.updatedAt = now;
+    if(exist[mid]) return;             // 已由其他端迁移并同步下来，只补标记不重复建
+    const orig = (r.original || "").trim();
+    const body = (r.understanding || r.after || "").trim();
+    let type = "idea";
+    if(orig && !body) type = "highlight";
+    else if(orig && body) type = "comment";
+    else if(!orig) type = "idea";
+    cogAnnos.push({
+      id: mid,
+      bookId: r.sourceBookId || "",
+      page: Number(r.page || 0),
+      startOffset: -1, endOffset: -1, pageTextLen: 0,   // 未知锚点 → 走 L2 就近命中
+      selectedText: orig,
+      type, color: ANNO_COLOR_DEFAULT,
+      text: body,
+      exprId: r.expressionId || "",
+      createdAt: r.created || now, updatedAt: now,
+      deviceId: r.deviceId || deviceId, deleted: !!r.deleted
+    });
+    exist[mid] = true; n++;
+  });
+  persistAnnos(); persistCog();
+  LS.set("wb_anno_migrated_v1", 1);   // 仅作防重跑优化，正确性由确定性 id 保证
+  return n;
+}
 function fillCogCats(){
   const opts = COG_CATS.map(c=>`<option>${c}</option>`).join("");
   $("#crCat").innerHTML = opts;
@@ -2650,17 +2873,18 @@ function bookStatusOf(read){
 }
 /* 导航：首页 hub ↔ 列表屏 */
 let cogScreen = 0;
+/* 屏位总数：0 首页 / 1 阅读记录 / 2 书籍库 / 3 思想 / 4 复盘 / 5 阅读空间 / 6 我的思考 / 7 英语表达 / 8 书籍信息。
+   加屏只需 ++ 此常量（CSS 宽度靠 --cog-n，位移由下方 JS 计算，零魔数）。 */
+const COG_SCREEN_COUNT = 9;
 function setCogScreen(n){
+  n = Math.max(0, Math.min(COG_SCREEN_COUNT - 1, Number(n) || 0));
   cogScreen = n;
-  const t = $("#cogTrack");
-  t.classList.remove("show-1","show-2","show-3","show-4","show-5","show-6","show-7");
-  if(n===1) t.classList.add("show-1");
-  if(n===2) t.classList.add("show-2");
-  if(n===3) t.classList.add("show-3");
-  if(n===4) t.classList.add("show-4");
-  if(n===5) t.classList.add("show-5");
-  if(n===6) t.classList.add("show-6");
-  if(n===7) t.classList.add("show-7");
+  const t = $("#cogTrack"); if(!t) return;
+  t.style.setProperty("--cog-n", COG_SCREEN_COUNT);
+  t.style.transform = "translateX(-" + (n * 100 / COG_SCREEN_COUNT) + "%)";
+  // show-N 类仅保留 FAB 显隐职责（CSS 中 transform 规则已删除）
+  for(let i=1; i<COG_SCREEN_COUNT; i++) t.classList.remove("show-" + i);
+  if(n > 0) t.classList.add("show-" + n);
 }
 function cogCount(k){
   if(k==="read") return cogReads.filter(r=>!r.deleted).length;
@@ -2716,7 +2940,7 @@ function renderCogHome(){
     </div>`;
 
   // 思想痕迹：阅读之后的认知变化（以前我认为 → 现在我理解）
-  const traces = cogReads.filter(r=>!r.deleted && r.after && r.after.trim()).slice()
+  const traces = cogReads.filter(r=>!r.deleted && !r.migratedToAnno && r.after && r.after.trim()).slice()
     .sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.updatedAt||0)-(a.updatedAt||0)).slice(0,6);
   if(traces.length){
     $("#cogTraces").innerHTML = traces.map(r=>`
@@ -2733,7 +2957,7 @@ function renderCogHome(){
 
   // 成长时间线：认知变化 + 观点 + 复盘，顺着时间排
   const items = [];
-  cogReads.filter(r=>!r.deleted && r.after && r.after.trim()).forEach(r=> items.push({
+  cogReads.filter(r=>!r.deleted && !r.migratedToAnno && r.after && r.after.trim()).forEach(r=> items.push({
     date:(r.date||""), sortDate:(r.date||"2000-01-01"), type:"change", title:"认知变化",
     sub:`《${r.book||"？"}》：${r.after}`, id:r.id, open:"read"
   }));
@@ -2797,29 +3021,117 @@ function renderCogHome(){
 function bookRecordCount(b){
   return cogReads.filter(r=>!r.deleted && (r.book||"")===b.title).length;
 }
+/** 阅读进度百分比：PDF 书优先用 lastPage/totalPages 自动算，其余用手填 progress */
+function bookProgressOf(b){
+  if(!b) return 0;
+  if(b.totalPages > 0 && b.lastPage > 0) return Math.max(0, Math.min(100, Math.round(b.lastPage / b.totalPages * 100)));
+  return Math.max(0, Math.min(100, Number(b.progress||0)));
+}
+/** 封面内容：图片 URL → <img>；emoji → 大字符；都没有 → 书名首字 + 渐变底 */
+function bookCoverHtml(b){
+  const cover = (b && b.cover || "").trim();
+  if(/^(https?:\/\/|data:image\/)/i.test(cover)) return `<img class="bc-img" src="${esc(cover)}" alt="" loading="lazy">`;
+  if(cover) return `<span class="bc-emoji">${esc(cover)}</span>`;
+  const ch = (b && b.title || "书").trim().charAt(0) || "书";
+  return `<span class="bc-letter">${esc(ch)}</span>`;
+}
 function renderCogShelf(box, limit, preview){
   if(!box) return;
-  let list = cogBooks.filter(b=>!b.deleted).slice().sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+  let list = cogBooks.filter(b=>!b.deleted).slice().sort((a,b)=>(b.lastReadAt||b.updatedAt||0)-(a.lastReadAt||a.updatedAt||0));
   if(limit) list = list.slice(0, limit);
   if(!list.length){ box.innerHTML = preview ? '<div class="empty" style="grid-column:1/-1;">书架还是空的。去「加一本书」建立你的第一本。</div>' : '<div class="empty">书架还是空的。点右下角 ＋ 加入第一本书。</div>'; return; }
   box.innerHTML = list.map(b=>{
-    const prog = Math.max(0, Math.min(100, Number(b.progress||0)));
-    const cnt = bookRecordCount(b);
-    const cover = b.cover || "📕";
-    const canResume = !!(b.file && b.file.path && b.lastPage && b.lastPage>1);
-    const resume = canResume ? `<span class="book-resume">↪ 继续 · ${b.lastPage}p</span>` : '';
-    const sub = canResume ? `读到第 ${b.lastPage} 页` : `认知记录 ${cnt} 条`;
-    return `<div class="book-card" data-book="${b.id}">
-      ${resume}
-      <div class="book-cover">${esc(cover)}</div>
+    const prog = bookProgressOf(b);
+    const annoN = annoCountOfBook(b.id);
+    const canResume = !!(b.lastPage && b.lastPage > 1);
+    const sub = canResume ? `读到第 ${b.lastPage} 页` : (b.totalPages ? `共 ${b.totalPages} 页` : `认知记录 ${bookRecordCount(b)} 条`);
+    return `<div class="book-card" data-book="${b.id}" title="${esc(b.title||"")}">
+      <div class="book-cover">
+        ${bookCoverHtml(b)}
+        ${annoN ? `<span class="book-badge">📝 ${annoN}</span>` : ""}
+        ${prog>0 ? `<span class="bc-prog"></span><i class="bc-bar" style="width:${prog}%"></i><span class="bc-pct">${prog}%</span>` : ""}
+      </div>
       <div class="book-title">${esc(b.title||"（未命名）")}</div>
       <div class="book-author">${esc(b.author||"未知作者")}</div>
-      <div class="book-prog"><i style="width:${prog}%"></i></div>
-      <div class="book-meta"><span>${sub}</span><span>认知记录 <b>${cnt}</b> 条</span></div>
+      <div class="book-meta"><span>${esc(sub)}</span></div>
     </div>`;
   }).join("");
-  $$("#cogShelf .book-card, #cogBookList .book-card").forEach(el=> el.onclick=()=> openCogReadingSpace(el.dataset.book));
+  $$(".book-card", box).forEach(el=>{
+    const id = el.dataset.book;
+    el.onclick = ()=>{ if(_suppressBookClick) return; openBookReader(id); };
+    bindLongPress(el, id);
+  });
 }
+
+/* ---- 书架长按 / 右键 → 管理菜单（长按后必须抑制随之而来的 click，否则会误跳进阅读器） ---- */
+let _suppressBookClick = false;
+function suppressBookClick(){ _suppressBookClick = true; setTimeout(()=>{ _suppressBookClick = false; }, 150); }
+function bindLongPress(el, bookId){
+  let timer = null, sx = 0, sy = 0, fired = false;
+  const clear = ()=>{ clearTimeout(timer); timer = null; };
+  el.addEventListener("touchstart", (e)=>{
+    const t = e.touches && e.touches[0]; if(!t) return;
+    sx = t.clientX; sy = t.clientY; fired = false;
+    clear();
+    timer = setTimeout(()=>{ fired = true; suppressBookClick(); openBookMenu(bookId, sx, sy); }, 600);
+  }, { passive:true });
+  el.addEventListener("touchmove", (e)=>{
+    const t = e.touches && e.touches[0]; if(!t) return;
+    if(Math.abs(t.clientX - sx) > 10 || Math.abs(t.clientY - sy) > 10) clear();
+  }, { passive:true });
+  el.addEventListener("touchend", ()=>{ clear(); if(fired) suppressBookClick(); }, { passive:true });
+  el.addEventListener("touchcancel", clear, { passive:true });
+  el.addEventListener("contextmenu", (e)=>{ e.preventDefault(); suppressBookClick(); openBookMenu(bookId, e.clientX, e.clientY); });
+}
+function closeBookMenu(){ const m = document.querySelector(".book-menu"); if(m) m.remove(); }
+function openBookMenu(bookId, x, y){
+  closeBookMenu();
+  const b = cogBooks.find(v=>v.id===bookId); if(!b) return;
+  const m = document.createElement("div");
+  m.className = "book-menu";
+  m.innerHTML = `<div class="bm-t">${esc(b.title||"（未命名）")}</div>
+    <button data-act="read">▶ 继续阅读</button>
+    <button data-act="info">ℹ️ 书籍信息</button>
+    <button data-act="anno">📝 批注（${annoCountOfBook(bookId)}）</button>
+    <button data-act="cover">🖼 换封面</button>
+    <button data-act="del" class="danger">🗑 删除</button>`;
+  document.body.appendChild(m);
+  clampFixed(m, x, y);
+  m.querySelector('[data-act="read"]').onclick = ()=>{ closeBookMenu(); openBookReader(bookId); };
+  m.querySelector('[data-act="info"]').onclick = ()=>{ closeBookMenu(); openBookInfo(bookId); };
+  m.querySelector('[data-act="anno"]').onclick = ()=>{ closeBookMenu(); annoFilterBookId = bookId; setCogScreen(6); renderCogAnno(); };
+  m.querySelector('[data-act="cover"]').onclick = ()=>{ closeBookMenu(); openCoverPick(bookId); };
+  m.querySelector('[data-act="del"]').onclick = ()=>{ closeBookMenu(); cogBookId = bookId; delCogBook(); };
+}
+/** 浮层通用：视口坐标系定位 + 边界夹取（一律 fixed，不要 absolute） */
+function clampFixed(el, x, y){
+  const w = el.offsetWidth || 180, h = el.offsetHeight || 120;
+  const L = Math.max(8, Math.min(window.innerWidth - w - 8, x));
+  const T = Math.max(8, Math.min(window.innerHeight - h - 8, y));
+  el.style.left = L + "px";
+  el.style.top = T + "px";
+}
+
+/* ---- 换封面弹窗 ---- */
+const COVER_EMOJIS = ["📕","📗","📘","📙","📓","📔","📒","📚","📖","🧠","💡","🚀","💰","🩺","🧬","⚖️","🌱","🏛","🗺","🎯","🔭","🧭"];
+let coverPickBookId = null;
+function openCoverPick(bookId){
+  const b = cogBooks.find(v=>v.id===bookId); if(!b) return;
+  coverPickBookId = bookId;
+  $("#cpGrid").innerHTML = COVER_EMOJIS.map(e=>`<button type="button" data-emoji="${esc(e)}">${e}</button>`).join("");
+  $$("#cpGrid button").forEach(el=> el.onclick = ()=>{ applyCover(el.dataset.emoji); });
+  const cur = (b.cover||"").trim();
+  $("#cpUrl").value = /^(https?:\/\/|data:image\/)/i.test(cur) ? cur : "";
+  $("#coverPickModal").classList.add("open");
+}
+function applyCover(cover){
+  const b = cogBooks.find(v=>v.id===coverPickBookId); if(!b){ closeCoverPick(); return; }
+  b.cover = cover || ""; b.coverAuto = false; b.updatedAt = Date.now();
+  saveCog(); closeCoverPick(); renderCogHome(); renderCogBooks();
+  if(cogScreen===8) renderBookInfo();
+  toast("封面已更新");
+}
+function closeCoverPick(){ $("#coverPickModal").classList.remove("open"); coverPickBookId = null; }
 /* ===== 阅读记录 ===== */
 function renderCogReads(){
   const list = cogReads.filter(r=>!r.deleted && r.kind!=="annotation").slice().sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.updatedAt||0)-(a.updatedAt||0));
@@ -3001,8 +3313,14 @@ async function delCogBook(){
   if(b && b.file && b.file.path){
     deleteBookFile(b.file.path).catch(()=>{}); // 静默失败
   }
-  cogBooks = cogBooks.map(b=> b.id===cogBookId ? Object.assign({},b,{deleted:true, updatedAt:Date.now()}) : b);
-  saveCog(); closeCogBook(); renderCogHome(); renderCogBooks(); toast("已删除");
+  const delId = cogBookId;
+  cogBooks = cogBooks.map(b=> b.id===delId ? Object.assign({},b,{deleted:true, updatedAt:Date.now()}) : b);
+  // 级联软删该书的批注，避免留下指向已删书籍的孤儿记录
+  cogAnnos = cogAnnos.map(a=> (a.bookId===delId && !a.deleted) ? Object.assign({},a,{deleted:true, updatedAt:Date.now(), deviceId}) : a);
+  saveCog(); persistAnnos(); closeCogBook();
+  if(cogReadingBookId===delId) cogReadingBookId = null;
+  if(bookInfoId===delId){ bookInfoId = null; if(cogScreen===8) setCogScreen(2); }
+  renderCogHome(); renderCogBooks(); renderCogAnno(); toast("已删除");
 }
 function closeCogBook(){ $("#cogBookModal").classList.remove("open"); cogBookId=null; cogBookPendingFile=null; cogBookRemovedFilePath=null; }
 
@@ -3175,32 +3493,67 @@ $("#cogReviewModal").addEventListener("click", e=>{ if(e.target.id==="cogReviewM
 let cogReadingBookId = null;
 let cogAnnoId = null, cogAnnoBookId = null, cogAnnoWords = [], cogAnnoPage = 0;
 
-/* ---- 阅读空间（屏5） ---- */
+/* ---- 阅读空间（屏5）：只保留「顶栏 + 阅读器」，表单已全部搬到屏8「书籍信息」 ---- */
 function openCogReadingSpace(bookId){
   const b = cogBooks.find(x=>x.id===bookId); if(!b) return;
   cogReadingBookId = bookId;
   setCogScreen(5);
   renderCogReading();
 }
+/** 点封面直达阅读器：进屏5、跳 lastPage（页码由 renderPdfBook 内部 clamp） */
+function openBookReader(bookId){ openCogReadingSpace(bookId); }
 function renderCogReading(){
   const b = cogBooks.find(x=>x.id===cogReadingBookId); if(!b) return;
-  const prog = Math.max(0, Math.min(100, Number(b.progress||0)));
-  const cover = b.cover || "📕";
-  const status = b.status || "未开始";
-  const excerpts = (b.excerpts||[]).filter(e=>!e.deleted).slice().sort((a,b2)=>(a.created||0)-(b2.created||0));
   const body = $("#cogReadingBody");
   body.innerHTML = `
-    <div class="read-head">
-      <div class="read-cover">${esc(cover)}</div>
-      <div style="min-width:0;">
-        <div class="read-title">${esc(b.title||"（未命名）")}</div>
-        <div class="read-author">${esc(b.author||"未知作者")}</div>
-      </div>
-    </div>
     <div class="read-file-source">
       <span class="read-file-state" id="crFileState"></span>
       <div class="read-file-acts">
+        <button class="btn sm ghost" id="crBookInfo" title="阅读状态 / 进度 / 片段">ℹ️ 书籍信息</button>
         <button class="btn sm ghost" id="crUploadFile" title="上传到云端，跨设备可读">☁️ 上传文件</button>
+      </div>
+    </div>
+    <div id="crFileBox" style="margin-top:8px;">
+      <div class="cog-hint">正在加载文件...</div>
+    </div>`;
+  const info = $("#crBookInfo");
+  if(info) info.onclick = ()=>{ if(cogReadingBookId) openBookInfo(cogReadingBookId); };
+  const upBtn = $("#crUploadFile");
+  if(upBtn) upBtn.onclick = ()=>{ if(cogReadingBookId) openCogBook(cogReadingBookId); };
+  renderCogReadingFile();
+}
+
+/* ---- 书籍信息（屏8）：承接原屏5 的阅读状态 / 进度 / 位置 / 片段 ---- */
+let bookInfoId = null;
+function openBookInfo(bookId){
+  const b = cogBooks.find(x=>x.id===bookId); if(!b) return;
+  bookInfoId = bookId;
+  setCogScreen(8);
+  renderBookInfo();
+}
+function renderBookInfo(){
+  const box = $("#cogBookInfoBody"); if(!box) return;
+  const b = cogBooks.find(x=>x.id===bookInfoId);
+  if(!b){ box.innerHTML = '<div class="empty">请先从书架选择一本书。</div>'; return; }
+  const auto = !!(b.totalPages > 0 && b.lastPage > 0);
+  const prog = bookProgressOf(b);
+  const status = b.status || "未开始";
+  const annoN = annoCountOfBook(b.id);
+  const excerpts = (b.excerpts||[]).filter(e=>!e.deleted).slice().sort((a,b2)=>(a.created||0)-(b2.created||0));
+  box.innerHTML = `
+    <div class="read-head">
+      <div class="read-cover">${bookCoverHtml(b)}</div>
+      <div style="min-width:0;">
+        <div class="read-title">${esc(b.title||"（未命名）")}</div>
+        <div class="read-author">${esc(b.author||"未知作者")}</div>
+        <div style="margin-top:6px;">${bookStatusBadge(status)}${b.cat?`<span class="cat-tag">${esc(b.cat)}</span>`:""}</div>
+      </div>
+    </div>
+    <div class="read-file-source">
+      <span class="read-file-state" data-kind="${b.file&&b.file.path?'cloud':'none'}">${b.file&&b.file.path?('☁️ '+esc(b.file.name||'云端文件')):'📎 暂无文件'}</span>
+      <div class="read-file-acts">
+        <button class="btn sm ghost" id="biCover">🖼 换封面</button>
+        <button class="btn sm ghost" id="biEdit">✏️ 编辑书籍</button>
       </div>
     </div>
     <div class="read-status-row">
@@ -3210,44 +3563,46 @@ function renderCogReading(){
       </select>
     </div>
     <div class="read-prog-row">
-      <input type="range" min="0" max="100" id="crProg" value="${prog}">
+      <input type="range" min="0" max="100" id="crProg" value="${prog}"${auto?" disabled":""}>
       <span class="read-prog-val" id="crProgVal">${prog}%</span>
-      <button class="btn sm" id="crProgSave">保存进度</button>
+      ${auto?"":'<button class="btn sm" id="crProgSave">保存进度</button>'}
     </div>
-    <div class="read-pos">
+    ${auto?`<div class="cog-hint">进度由阅读位置自动计算：第 ${b.lastPage} / ${b.totalPages} 页。手动滑杆已停用。</div>`:""}
+    <div class="read-pos" style="margin-top:10px;">
       <input id="crPos" placeholder="阅读位置，如：第 52 页 / Chapter 3" value="${esc(b.lastPosition||"")}">
     </div>
-    <div id="crFileBox" style="margin-top:8px;">
-      <div class="cog-hint">正在加载文件...</div>
+    <div class="cog-hint" style="margin-top:10px;">📝 本书批注 <b>${annoN}</b> 条 · 认知记录 <b>${bookRecordCount(b)}</b> 条</div>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+      <button class="btn sm" id="biRead">▶ 继续阅读${b.lastPage>1?("（第 "+b.lastPage+" 页）"):""}</button>
+      <button class="btn sm ghost" id="biAnnos">📝 查看批注</button>
     </div>
-    <div class="read-pos" style="margin-top:12px;">
+    <div class="read-pos" style="margin-top:14px;">
       <textarea id="crExcerpt" placeholder="粘贴你读到的片段，稍后写思考"></textarea>
       <button class="btn sm" id="crExcerptAdd">＋ 添加片段</button>
     </div>
-    <div id="cogExcerptList" style="margin-top:10px;"></div>
-    `;
-  // 状态
+    <div id="cogExcerptList" style="margin-top:10px;"></div>`;
   $("#crStatus").value = status;
-  // 进度
   const progEl = $("#crProg"), progVal = $("#crProgVal");
   progEl.oninput = ()=>{ progVal.textContent = progEl.value + "%"; };
-  progEl.onchange = saveCogProgress;
-  $("#crProgSave").onclick = saveCogProgress;
-  // 位置
+  if(!auto){
+    progEl.onchange = saveCogProgress;
+    const ps = $("#crProgSave"); if(ps) ps.onclick = saveCogProgress;
+  }
   $("#crPos").onblur = saveCogProgress;
-  // 状态
   $("#crStatus").onchange = saveCogProgress;
-  // 片段
+  $("#biEdit").onclick = ()=> openCogBook(b.id);
+  $("#biCover").onclick = ()=> openCoverPick(b.id);
+  $("#biRead").onclick = ()=> openBookReader(b.id);
+  $("#biAnnos").onclick = ()=>{ annoFilterBookId = b.id; setCogScreen(6); renderCogAnno(); };
   $("#crExcerptAdd").onclick = ()=>{
     const t = $("#crExcerpt").value.trim(); if(!t){ toast("先粘贴读到的内容"); return; }
-    const bk = cogBooks.find(x=>x.id===cogReadingBookId); if(!bk) return;
+    const bk = cogBooks.find(x=>x.id===bookInfoId); if(!bk) return;
     bk.excerpts = bk.excerpts||[];
     bk.excerpts.push({ id:uid(), text:t, created:Date.now(), deviceId, deleted:false });
     bk.updatedAt = Date.now();
-    saveCog(); renderCogReading(); renderCogHome();
+    saveCog(); renderBookInfo(); renderCogHome();
     toast("已添加片段");
   };
-  // 片段列表
   const list = $("#cogExcerptList");
   if(!excerpts.length){ list.innerHTML = '<div class="empty" style="padding:8px 0;">还没有阅读片段。粘贴一段你读到的文字，再写你的思考。</div>'; }
   else {
@@ -3263,21 +3618,14 @@ function renderCogReading(){
     $$("#cogExcerptList .excerpt").forEach(el=>{
       const eid = el.dataset.ex;
       const ex = excerpts.find(x=>x.id===eid);
-      el.querySelector('[data-act="think"]').onclick = ()=> openCogAnno(null, cogReadingBookId, ex.text);
+      el.querySelector('[data-act="think"]').onclick = ()=> openCogAnno(null, bookInfoId, ex.text);
       el.querySelector('[data-act="del"]').onclick = ()=>{
-        const bk = cogBooks.find(x=>x.id===cogReadingBookId); if(!bk) return;
+        const bk = cogBooks.find(x=>x.id===bookInfoId); if(!bk) return;
         bk.excerpts = (bk.excerpts||[]).map(x=> x.id===eid ? Object.assign({},x,{deleted:true, updatedAt:Date.now()}) : x);
-        saveCog(); renderCogReading(); renderCogHome();
+        saveCog(); renderBookInfo(); renderCogHome();
       };
     });
   }
-  // 文件来源：云端（跨设备同步）。点「☁️ 上传文件」打开编辑弹窗加入文件。
-  const upBtn = $("#crUploadFile");
-  if(upBtn){
-    upBtn.onclick = ()=> { if(cogReadingBookId) openCogBook(cogReadingBookId); };
-  }
-  // 加载文件
-  renderCogReadingFile();
 }
 async function renderCogReadingFile(){
   const b = cogBooks.find(x=>x.id===cogReadingBookId);
@@ -3352,6 +3700,7 @@ async function pdfCachePut(bookId,buf){ try{ const db=await openPdfCacheDB(); if
 async function refreshPdfCache(bookId, source){ try{ if(typeof source!=='string') return; const buf=await fetch(source).then(r=>r.arrayBuffer()); if(buf && buf.byteLength) await pdfCachePut(bookId, buf); }catch(e){} }
 let pdfCurrentPage = 1;
 let pdfJumpTo = null;     // 从批注列表跳转指定页
+let pdfAnnoFilter = 'all';   // 阅读器内批注侧栏的类型筛选：all / highlight / comment / idea
 let _pdfSelBound = false;
 
 async function renderPdfBook(b, source){
@@ -3360,8 +3709,24 @@ async function renderPdfBook(b, source){
   const box = $("#crFileBox");
   box.innerHTML = `<div class="pdf-reader">
     <aside class="pdf-toc" id="pdfToc">
-      <div class="pdf-toc-head">📑 目录</div>
-      <div class="pdf-toc-list" id="pdfTocList"><div class="toc-empty">加载中…</div></div>
+      <div class="pdf-toc-tabs">
+        <button class="pdf-toc-tab active" data-tab="toc">📑 目录</button>
+        <button class="pdf-toc-tab" data-tab="anno">🖍 批注<span class="anno-count" id="pdfAnnoCount"></span></button>
+      </div>
+      <div class="pdf-toc-body">
+        <div class="pdf-toc-pane" data-pane="toc">
+          <div class="pdf-toc-list" id="pdfTocList"><div class="toc-empty">加载中…</div></div>
+        </div>
+        <div class="pdf-toc-pane" data-pane="anno" style="display:none;">
+          <div class="pdf-anno-filter" id="pdfAnnoFilter">
+            <button data-f="all" class="active">全部</button>
+            <button data-f="highlight" title="只看高亮">🖍</button>
+            <button data-f="comment" title="只看评论">💬</button>
+            <button data-f="idea" title="只看想法">💡</button>
+          </div>
+          <div class="pdf-toc-list pdf-anno-list" id="pdfAnnoList"><div class="toc-empty">还没有批注</div></div>
+        </div>
+      </div>
     </aside>
     <div class="pdf-main">
       <div class="pdf-toolbar">
@@ -3405,6 +3770,7 @@ async function renderPdfBook(b, source){
   bindPdfToolbar(doc, total, pagesEl, b);
   bindPdfResize(doc, total, pagesEl, b);   // 窗口/设备宽度变化时按新容器宽度重排（debounce）
   loadPdfOutline(doc);
+  bindPdfAnnoSidebar();                    // 侧栏「📑 目录 / 🖍 批注」Tab + 类型筛选
   if(pdfMode === 'scroll'){
     layoutScroll(doc, total, pagesEl, b, startPage);
   } else {
@@ -3444,7 +3810,7 @@ function bindPdfToolbar(doc, total, pagesEl, b){
   $("#pdfZoomIn").onclick = ()=>{ onPdfZoom(doc,total,pagesEl,b, Math.min(3, Math.round((pdfZoom+0.2)*100)/100)); };
   $("#pdfZoomOut").onclick = ()=>{ onPdfZoom(doc,total,pagesEl,b, Math.max(0.5, Math.round((pdfZoom-0.2)*100)/100)); };
   $("#pdfZoomVal").textContent = Math.round(pdfZoom*100)+'%';
-  $("#pdfPageAnno").onclick = ()=>{ openCogAnno(null, b.id, '', pdfCurrentPage); toast('已为第 '+pdfCurrentPage+' 页打开批注'); };
+  $("#pdfPageAnno").onclick = ()=>{ openAnnoEditor({ type:'idea', bookId:b.id, page:pdfCurrentPage, startOffset:-1, endOffset:-1, pageTextLen:0, selectedText:'' }); };
 }
 
 /* === 自适应：阅读容器可用宽度 → fit-to-width 基准 scale === */
@@ -3623,10 +3989,10 @@ async function renderPage(doc, total, pagesEl, b, n){
   pagesEl.innerHTML = ''; pagesEl.appendChild(pageDiv);
   const ctx = canvas.getContext('2d');
   await page.render({ canvasContext: ctx, viewport: rVp }).promise;
-  try { const textContent = await page.getTextContent(); pageDiv.appendChild(buildTextLayer(textContent, lVp)); } catch(_) {}
+  try { const textContent = await page.getTextContent(); pageDiv.appendChild(buildTextLayer(textContent, lVp, n)); } catch(_) {}
   updatePdfPageInfo(total);
   highlightTocCurrent(n);
-  applyHighlights(pagesEl, b.id, n);
+  applyAnnos(b.id, n);
   saveBookProgress(b, n);
 }
 function layoutScroll(doc, total, pagesEl, b, startPage){
@@ -3678,8 +4044,8 @@ async function renderScrollPage(doc, total, pagesEl, b, n){
     slot.innerHTML = ''; slot.appendChild(pageDiv);
     const ctx = canvas.getContext('2d');
     await page.render({ canvasContext: ctx, viewport: rVp }).promise;
-    try { const textContent = await page.getTextContent(); pageDiv.appendChild(buildTextLayer(textContent, lVp)); } catch(_) {}
-    applyHighlights(slot, b.id, n);
+    try { const textContent = await page.getTextContent(); pageDiv.appendChild(buildTextLayer(textContent, lVp, n)); } catch(_) {}
+    applyAnnos(b.id, n);
     highlightTocCurrent(n);
     pdfEvictFarPages();   // 高清 canvas 显存占用是原来的 dpr² 倍，长文档需要及时回收远处页面
   } catch(e){ slot.innerHTML = '<div class="cog-hint">第 '+n+' 页渲染失败</div>'; pdfRendered.delete(n); }
@@ -3779,10 +4145,12 @@ function highlightTocCurrent(n){
   });
 }
 
-/* 手动构建可选中的文字层（v4 的 renderTextLayer 已移入 viewer 模块，这里自己实现，零依赖）。 */
-function buildTextLayer(textContent, viewport){
+/* 手动构建可选中的文字层（v4 的 renderTextLayer 已移入 viewer 模块，这里自己实现，零依赖）。
+   第 3 个入参 page 会写进 container.dataset.page —— 单页模式靠它定位目标页文字层（getPageLayer）。 */
+function buildTextLayer(textContent, viewport, page){
   const container = document.createElement('div');
   container.className = 'textLayer';
+  if(page != null) container.dataset.page = page;
   container.style.width = Math.floor(viewport.width)+'px';
   container.style.height = Math.floor(viewport.height)+'px';
   const vt = viewport.transform;
@@ -3823,89 +4191,491 @@ function buildTextLayer(textContent, viewport){
   return container;
 }
 
+/* ============================================================================
+   AnchorEngine：批注锚定引擎
+   锚定坐标系 = textLayer 内 span 的 DOM 序 textContent 无分隔拼接串。
+   写入与读取共用同一坐标系，天然自洽 —— 同时根治「同页重复文字错位」与
+   「跨行选中 sel.toString() 插换行导致 indexOf=-1 静默丢高亮」两个 bug。
+   offset 与 scale / dpr / 单页-滚动模式 / 窗口宽度全部无关，重排后必然精确复原。
+   ============================================================================ */
+/** 定位某页的 textLayer：滚动模式走页槽，单页模式走 data-page 标记。找不到返回 null（该页尚未渲染） */
+function getPageLayer(page){
+  const n = Number(page);
+  if(!n) return null;
+  if(pdfMode === 'scroll'){
+    const slot = pdfPageDivs[n];
+    return slot ? slot.querySelector('.textLayer') : null;
+  }
+  const box = pdfPagesEl || $("#pdfPages");
+  if(!box) return null;
+  const layer = box.querySelector('.textLayer[data-page="' + n + '"]');
+  if(layer) return layer;
+  // 兼容：单页模式容器内只有一个文字层，且当前页与目标页一致时直接用
+  return (Number(pdfCurrentPage) === n) ? box.querySelector('.textLayer') : null;
+}
+/** 唯一权威的坐标系构建函数。任何涉及 offset 的代码都必须用它，不得自行拼接。 */
+function buildPageIndex(layerEl){
+  const spans = Array.prototype.filter.call(layerEl.childNodes, s=> s.nodeType === 1);
+  const starts = []; let acc = 0;
+  spans.forEach(s=>{ starts.push(acc); acc += s.textContent.length; });
+  const full = spans.map(s=> s.textContent).join('');
+  return { spans, starts, full, len: full.length };
+}
+/** 由 Range 反算 offset 区间。selectedText 一律取 full.slice(start,end)，禁止 sel.toString()。 */
+function rangeToOffsets(range){
+  if(!range) return null;
+  const hostSpan = (node)=>{
+    let el = (node && node.nodeType === 1) ? node : (node && node.parentElement);
+    while(el && !(el.parentElement && el.parentElement.classList && el.parentElement.classList.contains('textLayer'))) el = el.parentElement;
+    return el || null;
+  };
+  const s0 = hostSpan(range.startContainer), s1 = hostSpan(range.endContainer);
+  if(!s0 || !s1) return null;
+  const layer = s0.parentElement;
+  if(!layer || !layer.classList.contains('textLayer')) return null;
+  const idx = buildPageIndex(layer);
+  const i0 = idx.spans.indexOf(s0), i1 = idx.spans.indexOf(s1);
+  if(i0 < 0 || i1 < 0) return null;
+  // startContainer 若是 span 本身（而非文本节点），offset 是子节点索引，此处按 0 / 全长处理
+  const off0 = (range.startContainer.nodeType === 3) ? range.startOffset : (range.startOffset > 0 ? s0.textContent.length : 0);
+  const off1 = (range.endContainer.nodeType === 3) ? range.endOffset : (range.endOffset > 0 ? s1.textContent.length : 0);
+  let start = idx.starts[i0] + off0;
+  let end   = idx.starts[i1] + off1;
+  if(end < start){ const t = start; start = end; end = t; }
+  start = Math.max(0, Math.min(idx.len, start));
+  end   = Math.max(0, Math.min(idx.len, end));
+  if(end <= start) return null;
+  const page = Number(layer.dataset.page || pdfCurrentPage || 0);
+  return { page, startOffset:start, endOffset:end, pageTextLen: idx.len, selectedText: idx.full.slice(start, end), layer, index: idx };
+}
+/** 找出 needle 在 hay 中的全部出现位置 */
+function allIndexOf(hay, needle){
+  const out = [];
+  if(!hay || !needle) return out;
+  let i = hay.indexOf(needle);
+  while(i >= 0){ out.push(i); i = hay.indexOf(needle, i + 1); }
+  return out;
+}
+/** 三级降级命中：L1 offset 精确 → L2 就近 indexOf → L3 放弃（静默，不报错不删数据） */
+function resolveAnnoRange(anno, index){
+  if(!anno || !index) return null;
+  const txt = anno.selectedText || "";
+  const s = Number(anno.startOffset), e = Number(anno.endOffset);
+  // L1：页文本长度对得上且 offset 合法 → 直接用
+  if(s >= 0 && e > s && e <= index.len && Number(anno.pageTextLen) === index.len){
+    return { start:s, end:e, exact:true };
+  }
+  // L2：就近 indexOf（迁移数据 startOffset<0 时取首匹，与旧行为持平不倒退）
+  if(txt){
+    const hits = allIndexOf(index.full, txt);
+    if(hits.length){
+      let pick = hits[0];
+      if(s >= 0){
+        let best = Infinity;
+        hits.forEach(h=>{ const d = Math.abs(h - s); if(d < best){ best = d; pick = h; } });
+      }
+      return { start:pick, end:pick + txt.length, exact:false };
+    }
+  }
+  // L1 兜底：文本找不到但 offset 本身合法（如 selectedText 为空的想法型）
+  if(s >= 0 && e > s && e <= index.len) return { start:s, end:e, exact:false };
+  return null;   // L3
+}
+
+/* ============================================================================
+   AnnoRenderer：批注上色 —— applyAnnos(bookId, page) 是全局唯一入口，且幂等。
+   调用点仅四处：renderPage 末尾 / renderScrollPage 末尾 / 增删改之后 / pullSync 之后。
+   ============================================================================ */
+/** 清掉一层 textLayer 上的批注痕迹（含角标层） */
+function clearAnnoMarks(layerEl){
+  if(!layerEl) return;
+  Array.prototype.forEach.call(layerEl.querySelectorAll('span.anno'), s=>{
+    s.classList.remove('anno');
+    delete s.dataset.annoId;
+    delete s.dataset.color;
+  });
+  const pageDiv = layerEl.parentElement;
+  const mk = pageDiv && pageDiv.querySelector('.annoMarkers');
+  if(mk) mk.innerHTML = '';
+}
+/** 角标覆盖层：textLayer 的 span 带 matrix 变换，::after 会被一起缩放，必须独立成层 */
+function ensureMarkerLayer(pageDiv){
+  if(!pageDiv) return null;
+  let mk = pageDiv.querySelector('.annoMarkers');
+  if(!mk){
+    mk = document.createElement('div');
+    mk.className = 'annoMarkers';
+    pageDiv.appendChild(mk);
+  }
+  return mk;
+}
+/** 唯一上色入口。无 scope 参数：页面元素由 getPageLayer 内部寻址。幂等 + 静默。 */
+function applyAnnos(bookId, page){
+  const layer = getPageLayer(page);
+  if(!layer) return;                       // 该页尚未渲染，等它渲染时自会调用
+  clearAnnoMarks(layer);
+  const list = annosOf(bookId, page);
+  if(!list.length) return;
+  const index = buildPageIndex(layer);
+  if(!index.len) return;
+  const pageDiv = layer.parentElement;
+  const mk = ensureMarkerLayer(pageDiv);
+  let layerRect = null;   // 懒取：只有真的要画角标时才触发一次布局测量
+  list.forEach(a=>{
+    if(a.startOffset < 0 && !a.selectedText) return;   // 想法型弱绑定：不落页面
+    let hit = null;
+    try { hit = resolveAnnoRange(a, index); } catch(_) { hit = null; }
+    if(!hit) return;                                   // L3：静默跳过，不报错不删数据
+    let last = null;
+    for(let i=0; i<index.spans.length; i++){
+      const s0 = index.starts[i], s1 = s0 + index.spans[i].textContent.length;
+      if(s1 <= hit.start || s0 >= hit.end) continue;   // 不重叠
+      const sp = index.spans[i];
+      sp.classList.add('anno');
+      sp.dataset.annoId = a.id;
+      sp.dataset.color = ANNO_COLORS[a.color] ? a.color : ANNO_COLOR_DEFAULT;
+      last = sp;
+    }
+    // 评论 / 想法：在命中区间末尾挂一个可点角标（高亮型无正文，不加角标避免视觉噪音）
+    // 注意：span 的位置完全由 matrix() 承载，offsetLeft/offsetTop 恒为 0，
+    // 必须用 getBoundingClientRect() 差值换算到 .annoMarkers 的本地坐标，否则角标会全部堆在页面左上角。
+    if(last && mk && a.type !== 'highlight'){
+      const lr = layerRect || (layerRect = layer.getBoundingClientRect());
+      const sr = last.getBoundingClientRect();
+      if(sr.width || sr.height){
+        const dot = document.createElement('span');
+        dot.className = 'anno-dot';
+        dot.dataset.annoId = a.id;
+        dot.textContent = a.type === 'idea' ? '💡' : '💬';
+        dot.style.background = (ANNO_COLORS[a.color] || ANNO_COLORS[ANNO_COLOR_DEFAULT]).dot;
+        const maxL = Math.max(0, lr.width - 15), maxT = Math.max(0, lr.height - 15);
+        dot.style.left = Math.max(0, Math.min(maxL, sr.right - lr.left - 3)) + 'px';
+        dot.style.top  = Math.max(0, Math.min(maxT, sr.top  - lr.top  - 6)) + 'px';
+        mk.appendChild(dot);
+      }
+    }
+  });
+}
+/** 云端回推 / 批量变更后：重绘当前书已渲染的所有页 */
+function repaintRenderedPages(bookId){
+  if(!bookId || !pdfPagesEl || !document.body.contains(pdfPagesEl)) return;
+  if(pdfMode === 'scroll'){
+    Object.keys(pdfPageDivs).forEach(k=>{ const n = Number(k); if(pdfRendered.has(n)) applyAnnos(bookId, n); });
+  } else {
+    applyAnnos(bookId, pdfCurrentPage);
+  }
+}
+/** 增删改批注后的统一收尾：重绘 + 刷新相关列表 */
+function afterAnnoChange(bookId, page){
+  if(page != null) applyAnnos(bookId, page); else repaintRenderedPages(bookId);
+  renderPdfAnnoList();                                  // 阅读器内批注侧栏（列表 + Tab 徽标）实时同步
+  renderCogAnno(); renderCogHome(); renderCogBooks();
+  if(cogScreen === 8) renderBookInfo();
+}
+
+/* ============================================================================
+   阅读器内批注侧栏（#pdfToc 的「🖍 批注」Tab）
+   列出当前书全部批注，按页 → 页内偏移排序；点击页码跳转并闪烁定位对应正文标记；
+   支持按类型筛选与就地编辑 / 删除。与屏 6 的 renderCogAnno() 相互独立、互不影响。
+   ============================================================================ */
+/** 绑定侧栏 Tab 切换与类型筛选（每次 renderPdfBook 重建 DOM 后调用一次） */
+function bindPdfAnnoSidebar(){
+  const toc = $("#pdfToc"); if(!toc) return;
+  const tabs = toc.querySelectorAll('.pdf-toc-tab');
+  tabs.forEach(tab=>{
+    tab.onclick = ()=>{
+      const name = tab.dataset.tab;
+      tabs.forEach(t=> t.classList.toggle('active', t === tab));
+      toc.querySelectorAll('.pdf-toc-pane').forEach(p=>{ p.style.display = (p.dataset.pane === name) ? '' : 'none'; });
+      if(name === 'anno') renderPdfAnnoList();
+    };
+  });
+  const fBtns = toc.querySelectorAll('#pdfAnnoFilter [data-f]');
+  fBtns.forEach(btn=>{
+    btn.classList.toggle('active', (btn.dataset.f || 'all') === pdfAnnoFilter);   // 复原上次筛选
+    btn.onclick = ()=>{
+      pdfAnnoFilter = btn.dataset.f || 'all';
+      fBtns.forEach(b=> b.classList.toggle('active', b === btn));
+      renderPdfAnnoList();
+    };
+  });
+  renderPdfAnnoList();   // 首次进入即算出 Tab 徽标数字（此时批注面板还是隐藏的）
+}
+/** 跳到某条批注所在页，并让正文里的对应标记闪一下，帮用户在整页文字里定位 */
+function jumpToAnnoPage(a){
+  if(!a || !a.page || !pdfDoc || !pdfPagesEl) return;
+  pdfGoToPage(pdfDoc, pdfTotal, pdfPagesEl, pdfBook, Number(a.page));
+  if(window.matchMedia("(max-width:760px)").matches){ const toc = $("#pdfToc"); if(toc) toc.classList.remove('show'); }
+  // 等目标页渲染 / 平滑滚动到位后再找标记；想法型批注可能不落页面，找不到就静默跳过
+  setTimeout(()=>{
+    if(!pdfPagesEl) return;
+    const m = pdfPagesEl.querySelector('[data-anno-id="' + a.id + '"]');
+    if(!m) return;
+    m.classList.add('anno-flash');
+    try{ m.scrollIntoView({ block:'center' }); }catch(_){}
+    setTimeout(()=>{ m.classList.remove('anno-flash'); }, 1200);
+  }, 280);
+}
+/** 渲染阅读器内批注列表 + Tab 徽标数字（阅读器未打开时安全空转） */
+function renderPdfAnnoList(){
+  const box = $("#pdfAnnoList");
+  if(!box || !document.body.contains(box)) return;      // 阅读器未打开 / 已卸载
+  const bookId = pdfBook ? pdfBook.id : null;
+  const total = bookId ? annoCountOfBook(bookId) : 0;
+  const badge = $("#pdfAnnoCount");
+  if(badge) badge.textContent = total ? String(total) : "";   // 0 条时留空，:empty 规则会隐藏徽标
+  if(!bookId){ box.innerHTML = '<div class="toc-empty">未打开书籍</div>'; return; }
+  let list = annosOf(bookId, null);
+  if(pdfAnnoFilter !== 'all') list = list.filter(a=> a.type === pdfAnnoFilter);
+  list.sort((a,b)=> (Number(a.page)||0)-(Number(b.page)||0) || (a.startOffset||0)-(b.startOffset||0));
+  if(!list.length){
+    box.innerHTML = '<div class="toc-empty">' + (total ? '该类型下还没有批注' : '还没有批注。选中正文点「🖍 / 💬 / 💡」写下第一条。') + '</div>';
+    return;
+  }
+  box.innerHTML = list.map(a=>{
+    const c = ANNO_COLORS[a.color] || ANNO_COLORS[ANNO_COLOR_DEFAULT];
+    const typeLabel = a.type==='highlight' ? '高亮' : (a.type==='idea' ? '想法' : '评论');
+    return `<div class="anno" data-anno="${a.id}">
+      <div class="a-book">
+        <span class="a-hl" style="color:${c.dot};background:${c.dot}22;border-color:${c.dot}66;">${ANNO_TYPE_ICON[a.type]||"📝"} ${typeLabel}</span>
+        ${a.page?`<span class="a-page" data-page="${a.page}">第 ${a.page} 页 ›</span>`:""}
+      </div>
+      ${a.selectedText?`<div class="a-orig">“${esc(a.selectedText)}”</div>`:""}
+      ${a.text?`<div class="a-under">${esc(a.text)}</div>`:""}
+      <div class="a-acts">
+        <button class="btn sm ghost" data-act="edit" title="编辑">✏️</button>
+        <button class="btn sm ghost" data-act="del" title="删除" style="color:#c0392b;">🗑</button>
+      </div>
+    </div>`;
+  }).join("");
+  box.querySelectorAll('.anno').forEach(el=>{
+    const a = list.find(x=> x.id === el.dataset.anno); if(!a) return;
+    const pg = el.querySelector('.a-page');            if(pg) pg.onclick = ()=> jumpToAnnoPage(a);
+    const ed = el.querySelector('[data-act="edit"]');  if(ed) ed.onclick = ()=> openAnnoEditor({ annoId:a.id });
+    const dl = el.querySelector('[data-act="del"]');   if(dl) dl.onclick = ()=>{ removeAnno(a.id); afterAnnoChange(a.bookId, a.page); toast("已删除"); };
+  });
+}
+
+/* ============================================================================
+   T03 交互层：选中工具栏 / 轻量编辑弹窗 / 气泡
+   浮层一律 position:fixed + getBoundingClientRect（同为视口坐标系）+ 边界夹取。
+   ============================================================================ */
+function removePdfSelBtn(){ const ex = document.querySelector('.pdf-sel-row'); if(ex) ex.remove(); }
+/** 浮层夹取到视口内：优先显示在锚点上方，放不下则翻到下方 */
+function placeFloatAbove(el, rect){
+  const w = el.offsetWidth || 220, h = el.offsetHeight || 44;
+  let L = rect.left + rect.width/2 - w/2;
+  L = Math.max(8, Math.min(window.innerWidth - w - 8, L));
+  let T = rect.top - h - 10;
+  if(T < 8) T = Math.min(window.innerHeight - h - 8, rect.bottom + 10);
+  T = Math.max(8, T);
+  el.style.left = L + 'px';
+  el.style.top  = T + 'px';
+}
+/** 由当前 selection 解析出 draft；无有效选区返回 null */
+function draftFromSelection(bookId){
+  const sel = window.getSelection();
+  if(!sel || sel.isCollapsed || !sel.rangeCount) return null;
+  const range = sel.getRangeAt(0);
+  const rect = range.getBoundingClientRect();
+  if(rect.width === 0 && rect.height === 0) return null;
+  const off = rangeToOffsets(range);
+  if(!off || !off.selectedText || off.selectedText.trim().length < 1) return null;
+  return {
+    draft: { bookId, page: off.page, startOffset: off.startOffset, endOffset: off.endOffset,
+             pageTextLen: off.pageTextLen, selectedText: off.selectedText },
+    rect
+  };
+}
+/** 5 按钮选中工具栏：🖍高亮 / 💬评论 / 💡想法 / 📋复制 / ✕ */
+function showSelToolbar(rect, draft){
+  removePdfSelBtn();
+  const row = document.createElement('div');
+  row.className = 'pdf-sel-row';
+  row.innerHTML = `<button class="b-hl" data-a="hl">🖍 高亮</button>
+    <button class="b-cm" data-a="cm">💬 评论</button>
+    <button class="b-id" data-a="id">💡 想法</button>
+    <button class="b-cp" data-a="cp">📋</button>
+    <button class="b-x" data-a="x">✕</button>`;
+  document.body.appendChild(row);
+  placeFloatAbove(row, rect);
+  const done = ()=>{ removePdfSelBtn(); const s = window.getSelection(); if(s) s.removeAllRanges(); };
+  row.querySelector('[data-a="hl"]').onclick = ()=>{
+    const a = addAnno(Object.assign({}, draft, { type:'highlight', color:lastAnnoColor }));
+    done(); afterAnnoChange(draft.bookId, draft.page); toast("已高亮");
+  };
+  row.querySelector('[data-a="cm"]').onclick = ()=>{ removePdfSelBtn(); openAnnoEditor(Object.assign({}, draft, { type:'comment' })); };
+  row.querySelector('[data-a="id"]').onclick = ()=>{ removePdfSelBtn(); openAnnoEditor(Object.assign({}, draft, { type:'idea' })); };
+  row.querySelector('[data-a="cp"]').onclick = ()=>{
+    const t = draft.selectedText || "";
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(t).then(()=>toast("已复制")).catch(()=>fallbackCopy(t));
+    } else fallbackCopy(t);
+    done();
+  };
+  row.querySelector('[data-a="x"]').onclick = done;
+}
+function fallbackCopy(t){
+  try{
+    const ta = document.createElement('textarea');
+    ta.value = t; ta.style.cssText = 'position:fixed;left:-9999px;top:0;';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    toast("已复制");
+  }catch(e){ toast("复制失败"); }
+}
 function bindPdfSelection(pagesEl, b){
-  pagesEl.onmouseup = ()=>{
+  const handle = ()=>{
     setTimeout(()=>{
-      const sel = window.getSelection();
-      const text = sel ? sel.toString().trim() : "";
       removePdfSelBtn();
-      if(!text || text.length < 2) return;
-      const range = sel.getRangeAt(0);
-      const rect = range.getBoundingClientRect();
-      if(rect.width===0 && rect.height===0) return;
-      const row = document.createElement('div');
-      row.className = 'pdf-sel-row';
-      row.style.left = (rect.left + rect.width/2) + 'px';
-      row.style.top = rect.top + 'px';
-      const bh = document.createElement('button'); bh.className='b-hl'; bh.textContent='🖍 高亮';
-      const ba = document.createElement('button'); ba.className='b-an'; ba.textContent='📝 批注';
-      row.appendChild(bh); row.appendChild(ba);
-      document.body.appendChild(row);
-      // 滚动模式下容器内有多页 .textLayer，必须把作用域收窄到当前页槽位（与 renderScrollPage 传 slot 一致），否则高亮会落到 DOM 最靠前的那页
-      bh.onclick = ()=>{ removePdfSelBtn(); sel.removeAllRanges(); addHighlight(b.id, text, pdfCurrentPage); applyHighlights((pdfMode==='scroll' && pdfPageDivs[pdfCurrentPage]) || pagesEl, b.id, pdfCurrentPage); };
-      ba.onclick = ()=>{ removePdfSelBtn(); sel.removeAllRanges(); openCogAnno(null, b.id, text, pdfCurrentPage); };
+      const r = draftFromSelection(b.id);
+      if(!r) return;
+      showSelToolbar(r.rect, r.draft);
     }, 10);
   };
+  pagesEl.onmouseup = handle;
+  // 移动端：长按选词后 touchend 触发，需给系统选区一点稳定时间
+  pagesEl.ontouchend = ()=>{ setTimeout(handle, 250); };
+  // 点批注上色区 / 角标 → 气泡（事件委托挂 #pdfPages，textLayer 反复重建也不用重绑）
+  pagesEl.onclick = (e)=>{
+    const t = e.target;
+    if(!t || !t.closest) return;
+    const hit = t.closest('span.anno[data-anno-id], .anno-dot[data-anno-id]');
+    if(!hit) return;
+    e.stopPropagation();
+    openAnnoPopover(hit.dataset.annoId, hit);
+  };
   if(!_pdfSelBound){
-    document.addEventListener('mousedown', (e)=>{
-      if(e.target && e.target.closest && e.target.closest('.pdf-sel-row')) return;
-      removePdfSelBtn();
-    }, true);
+    // 点外部关闭：工具栏 / 气泡 / 书架菜单统一在此收口（捕获阶段，早于业务点击）
+    const closeFloats = (e)=>{
+      const t = e.target;
+      const inside = (sel)=> !!(t && t.closest && t.closest(sel));
+      if(!inside('.pdf-sel-row')) removePdfSelBtn();
+      if(!inside('.anno-pop') && !inside('span.anno') && !inside('.anno-dot')) closeAnnoPopover();
+      if(!inside('.book-menu') && !inside('.book-card')) closeBookMenu();
+    };
+    document.addEventListener('mousedown', closeFloats, true);
+    document.addEventListener('touchstart', closeFloats, true);
     _pdfSelBound = true;
   }
 }
-function removePdfSelBtn(){ const ex = document.querySelector('.pdf-sel-row'); if(ex) ex.remove(); }
 
-/* 划词高亮：选中文字一键加高亮（持久化为 highlight 型 annotation，可在批注流查看/升级为批注） */
-function addHighlight(bookId, text, page){
-  const rec = { id: uid(), kind:"annotation", book: bookTitleOf(bookId), sourceBookId:bookId, original:text, understanding:"", before:text, after:"", chapter:"", page, highlight:true, date:todayStr(), apply:[], doubt:"", duration:0, cat:COG_CATS[0], created:Date.now(), updatedAt:Date.now(), deviceId, deleted:false };
-  cogReads.push(rec);
-  saveCog(); renderCogHome(); renderCogAnno();
-  toast("已高亮");
+/* ---- 轻量批注编辑弹窗（评论 / 想法）---- */
+let annoEditorDraft = null;   // {annoId?} 有 annoId 即编辑态
+function renderColorDots(box, active, onPick){
+  if(!box) return;
+  box.innerHTML = Object.keys(ANNO_COLORS).map(k=>
+    `<button type="button" class="cd${k===active?' active':''}" data-color="${k}" title="${ANNO_COLORS[k].label}" style="background:${ANNO_COLORS[k].dot}"></button>`
+  ).join("");
+  $$(".cd", box).forEach(el=> el.onclick = ()=> onPick(el.dataset.color));
 }
-function bookTitleOf(bookId){ const b = cogBooks.find(x=>x.id===bookId); return b ? (b.title||"") : ""; }
+function openAnnoEditor(draft){
+  const d = Object.assign({}, draft || {});
+  if(d.annoId){
+    const a = getAnno(d.annoId);
+    if(!a){ toast("批注不存在"); return; }
+    Object.assign(d, { bookId:a.bookId, page:a.page, startOffset:a.startOffset, endOffset:a.endOffset,
+                       pageTextLen:a.pageTextLen, selectedText:a.selectedText, type:a.type, color:a.color, text:a.text });
+  }
+  if(!d.type) d.type = 'comment';
+  if(!ANNO_COLORS[d.color]) d.color = lastAnnoColor;
+  if(!d.bookId) d.bookId = cogReadingBookId || "";
+  annoEditorDraft = d;
+  $("#aeTitle").textContent = d.type === 'idea' ? "💡 写想法" : "💬 写评论";
+  const q = $("#aeQuote");
+  if(d.selectedText){ q.style.display = ""; q.textContent = "“" + d.selectedText + "”"; }
+  else { q.style.display = "none"; q.textContent = ""; }
+  $("#aeText").value = d.text || "";
+  renderColorDots($("#aeColors"), d.color, pickAnnoEditorColor);
+  $("#aeDelete").style.display = d.annoId ? "" : "none";
+  $("#annoEditorModal").classList.add("open");
+  setTimeout(()=>{ const t = $("#aeText"); if(t) t.focus(); }, 30);
+}
+function pickAnnoEditorColor(c){
+  if(!annoEditorDraft) return;
+  annoEditorDraft.color = c;
+  renderColorDots($("#aeColors"), c, pickAnnoEditorColor);
+}
+function saveAnnoEditor(){
+  const d = annoEditorDraft; if(!d) return;
+  const text = $("#aeText").value.trim();
+  if(!text && !d.selectedText){ toast("写点什么吧"); return; }
+  setLastAnnoColor(d.color);
+  let a;
+  if(d.annoId) a = updateAnno(d.annoId, { text, color:d.color, type:d.type });
+  else a = addAnno({ bookId:d.bookId, page:d.page, startOffset:d.startOffset, endOffset:d.endOffset,
+                     pageTextLen:d.pageTextLen, selectedText:d.selectedText, type:d.type, color:d.color, text });
+  closeAnnoEditor();
+  if(a) afterAnnoChange(a.bookId, a.page);
+  toast(d.annoId ? "已更新" : "已保存");
+}
+function deleteAnnoEditor(){
+  const d = annoEditorDraft; if(!d || !d.annoId) return;
+  const a = getAnno(d.annoId);
+  removeAnno(d.annoId);
+  closeAnnoEditor();
+  if(a) afterAnnoChange(a.bookId, a.page);
+  toast("已删除");
+}
+function closeAnnoEditor(){ $("#annoEditorModal").classList.remove("open"); annoEditorDraft = null; }
 
-/* 在该页文字层匹配高亮原文并加 .hl 类；点高亮打开编辑 */
-function applyHighlights(pagesEl, bookId, page){
-  const layer = pagesEl && pagesEl.querySelector('.textLayer');
-  if(!layer) return;
-  const spans = Array.prototype.filter.call(layer.childNodes, s=> s.nodeType===1 && s.textContent);
-  if(!spans.length) return;
-  const full = spans.map(s=>s.textContent).join('');
-  const hl = cogReads.filter(r=>!r.deleted && r.sourceBookId===bookId && r.page===page && r.highlight && r.original && r.original.trim());
-  if(!hl.length) return;
-  hl.forEach(r=>{
-    let idx = full.indexOf(r.original);
-    if(idx < 0) return;
-    const end = idx + r.original.length;
-    let acc = 0;
-    spans.forEach(s=>{
-      const s0 = acc, s1 = acc + s.textContent.length; acc = s1;
-      if(s1 <= idx || s0 >= end) return;   // 不重叠
-      s.classList.add('hl');
-      s.dataset.hlId = r.id;
-      s.onclick = (ev)=>{ ev.stopPropagation(); openCogAnno(r.id); };
-    });
+/* ---- 批注气泡（查看 / 编辑 / 换色 / 删除）---- */
+function closeAnnoPopover(){ const p = document.querySelector('.anno-pop'); if(p) p.remove(); }
+function openAnnoPopover(annoId, anchorEl){
+  closeAnnoPopover();
+  const a = getAnno(annoId); if(!a || a.deleted) return;
+  const pop = document.createElement('div');
+  pop.className = 'anno-pop';
+  pop.innerHTML = `
+    ${a.selectedText ? `<div class="ap-quote">“${esc(a.selectedText)}”</div>` : ""}
+    <div class="${a.text ? 'ap-text' : 'ap-empty'}">${a.text ? esc(a.text) : (ANNO_TYPE_ICON[a.type]||"") + " 纯高亮，没有正文"}</div>
+    <div class="ap-acts">
+      <div class="color-dots" id="apColors"></div>
+      <span style="flex:1;"></span>
+      <button class="btn sm ghost" data-a="edit">✏️</button>
+      <button class="btn sm ghost" data-a="del" style="color:#c0392b;">🗑</button>
+      <button class="btn sm ghost" data-a="x">✕</button>
+    </div>`;
+  document.body.appendChild(pop);
+  const r = anchorEl && anchorEl.getBoundingClientRect ? anchorEl.getBoundingClientRect() : { left:window.innerWidth/2, top:window.innerHeight/2, width:0, height:0, bottom:window.innerHeight/2 };
+  placeFloatAbove(pop, r);
+  renderColorDots($("#apColors", pop), a.color, (c)=>{
+    setLastAnnoColor(c);
+    updateAnno(a.id, { color:c });
+    renderColorDots($("#apColors", pop), c, ()=>{});
+    afterAnnoChange(a.bookId, a.page);
+    closeAnnoPopover();
   });
+  pop.querySelector('[data-a="edit"]').onclick = ()=>{ closeAnnoPopover(); openAnnoEditor({ annoId:a.id }); };
+  pop.querySelector('[data-a="del"]').onclick = ()=>{ closeAnnoPopover(); removeAnno(a.id); afterAnnoChange(a.bookId, a.page); toast("已删除"); };
+  pop.querySelector('[data-a="x"]').onclick = closeAnnoPopover;
 }
+
+function bookTitleOf(bookId){ const b = cogBooks.find(x=>x.id===bookId); return b ? (b.title||"") : ""; }
 
 /* 轻量保存阅读进度（多端续读）：不重渲染书架防闪烁，debounce 落盘+同步 */
 let _lastPageSaveT = null;
 function saveBookProgress(b, n){
   if(!b) return;
   b.lastPage = n; b.lastReadAt = Date.now(); b.updatedAt = Date.now();
+  if(pdfTotal > 0){
+    b.totalPages = pdfTotal;
+    b.progress = Math.max(0, Math.min(100, Math.round(n / pdfTotal * 100)));
+    b.progressAuto = true;
+  }
   clearTimeout(_lastPageSaveT);
   _lastPageSaveT = setTimeout(()=>{ persistCog(); scheduleSync(); }, 400);
 }
 
 function saveCogProgress(){
-  const b = cogBooks.find(x=>x.id===cogReadingBookId); if(!b) return;
-  const p = Math.max(0, Math.min(100, parseInt($("#crProg")?.value||b.progress||0,10)||0));
-  const pos = $("#crPos") ? $("#crPos").value.trim() : "";
+  const b = cogBooks.find(x=>x.id===(bookInfoId||cogReadingBookId)); if(!b) return;
+  const auto = !!(b.totalPages > 0 && b.lastPage > 0);   // PDF 书进度自动化，忽略手动滑杆
+  const p = auto ? bookProgressOf(b) : Math.max(0, Math.min(100, parseInt(($("#crProg")&&$("#crProg").value)||b.progress||0,10)||0));
+  const pos = $("#crPos") ? $("#crPos").value.trim() : (b.lastPosition||"");
   const status = $("#crStatus") ? $("#crStatus").value : (b.status||"未开始");
   b.progress = p; b.lastPosition = pos; b.status = status; b.updatedAt = Date.now();
   saveCog(); renderCogHome();
-  if(cogScreen===5) $("#crProgVal") && ($("#crProgVal").textContent = p + "%");
+  const pv = $("#crProgVal"); if(pv) pv.textContent = p + "%";
 }
 /* ---- 阅读批注：我的思考（弹窗） ---- */
 function openCogAnno(id, bookId, origText, page){
@@ -3961,37 +4731,52 @@ function delCogAnno(){
 }
 function closeCogAnno(){ $("#cogAnnoModal").classList.remove("open"); cogAnnoId=null; }
 
-/* ---- 我的读书思考（屏6） ---- */
+/* ---- 我的读书思考（屏6）：数据源已切到 cogAnnos ---- */
+let annoFilterBookId = null;   // 从书架/书籍信息进来时只看这本书的批注
 function renderCogAnno(){
-  const list = cogReads.filter(r=>!r.deleted && r.kind==="annotation").slice().sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
   const box = $("#cogAnnoList");
   if(!box) return;
-  if(!list.length){ box.innerHTML='<div class="empty">还没有读书思考。进入一本书的阅读空间，点「我的思考」开始沉淀。</div>'; return; }
-  box.innerHTML = list.map(r=>`
-    <div class="anno" data-anno="${r.id}">
-      <div class="a-book">${r.highlight?`<span class="a-hl">🖍 高亮</span>`:""}《${esc(r.book||"？")}》${r.page?`<span class="a-page" data-page="${r.page}">第 ${r.page} 页 ›</span>`:""}</div>
-      ${r.original?`<div class="a-orig">“${esc(r.original)}”</div>`:""}
-      <div class="a-under">${esc(r.understanding||"")}</div>
+  let list = cogAnnos.filter(a=> a && !a.deleted).slice().sort((a,b)=>(b.updatedAt||b.createdAt||0)-(a.updatedAt||a.createdAt||0));
+  if(annoFilterBookId) list = list.filter(a=> a.bookId === annoFilterBookId);
+  const filterBar = annoFilterBookId
+    ? `<div class="cog-hint" style="display:flex;align-items:center;gap:8px;">只看《${esc(bookTitleOf(annoFilterBookId)||"该书")}》的批注<button class="btn sm ghost" id="annoClearFilter" style="margin-left:auto;">显示全部</button></div>`
+    : "";
+  if(!list.length){
+    box.innerHTML = filterBar + '<div class="empty">还没有读书思考。打开一本 PDF，选中文字点「💬 评论」或「💡 想法」开始沉淀。</div>';
+    const cf = $("#annoClearFilter"); if(cf) cf.onclick = ()=>{ annoFilterBookId = null; renderCogAnno(); };
+    return;
+  }
+  box.innerHTML = filterBar + list.map(a=>{
+    const c = ANNO_COLORS[a.color] || ANNO_COLORS[ANNO_COLOR_DEFAULT];
+    const typeTag = `<span class="a-hl" style="color:${c.dot};background:${c.dot}22;border-color:${c.dot}66;">${ANNO_TYPE_ICON[a.type]||"📝"} ${a.type==='highlight'?'高亮':(a.type==='idea'?'想法':'评论')}</span>`;
+    return `<div class="anno" data-anno="${a.id}">
+      <div class="a-book">${typeTag}《${esc(bookTitleOf(a.bookId)||"？")}》${a.page?`<span class="a-page" data-page="${a.page}">第 ${a.page} 页 ›</span>`:""}</div>
+      ${a.selectedText?`<div class="a-orig">“${esc(a.selectedText)}”</div>`:""}
+      <div class="a-under">${esc(a.text||"")}</div>
       <div class="a-acts">
-        ${r.expressionId?"":`<button class="btn sm" data-act="gen">🇬🇧 生成英文</button>`}
+        ${a.exprId?"":`<button class="btn sm" data-act="gen">🇬🇧 生成英文</button>`}
         <button class="btn sm ghost" data-act="edit">✏️ 编辑</button>
         <button class="btn sm ghost" data-act="del">🗑</button>
       </div>
-    </div>`).join("");
+    </div>`;
+  }).join("");
+  const cf = $("#annoClearFilter"); if(cf) cf.onclick = ()=>{ annoFilterBookId = null; renderCogAnno(); };
   $$("#cogAnnoList .anno").forEach(el=>{
-    const id = el.dataset.anno; const r = list.find(x=>x.id===id);
-    const pg = el.querySelector('.a-page'); if(pg) pg.onclick = ()=>{ if(r.sourceBookId){ pdfJumpTo = r.page; openCogReadingSpace(r.sourceBookId); } };
-    const gen = el.querySelector('[data-act="gen"]'); if(gen) gen.onclick = ()=> genExprFromAnno(r);
-    el.querySelector('[data-act="edit"]').onclick = ()=> openCogAnno(id);
-    el.querySelector('[data-act="del"]').onclick = ()=>{ cogAnnoId=id; delCogAnno(); };
+    const id = el.dataset.anno; const a = list.find(x=>x.id===id); if(!a) return;
+    const pg = el.querySelector('.a-page'); if(pg) pg.onclick = ()=>{ if(a.bookId){ pdfJumpTo = a.page; openCogReadingSpace(a.bookId); } };
+    const gen = el.querySelector('[data-act="gen"]'); if(gen) gen.onclick = ()=> genExprFromAnno(a);
+    el.querySelector('[data-act="edit"]').onclick = ()=> openAnnoEditor({ annoId:id });
+    el.querySelector('[data-act="del"]').onclick = ()=>{ removeAnno(id); afterAnnoChange(a.bookId, a.page); toast("已删除"); };
   });
 }
-async function genExprFromAnno(r){
-  const cn = r.understanding || r.original; if(!cn){ toast("这条思考没有可翻译的内容"); return; }
-  const j = await callAI("express", cn, r.level||"cet4");
+/** 由一条批注生成英文表达，回写 exprId 桥接现有 cogExpr */
+async function genExprFromAnno(a){
+  const cn = a.text || a.selectedText; if(!cn){ toast("这条批注没有可翻译的内容"); return; }
+  const j = await callAI("express", cn, "cet4");
   if(!j) return;
-  const expr = { id: uid(), cn, en: j.english||"", sourceBook:r.book||"", sourceBookId:r.sourceBookId||"", annotationId: r.id, words: j.words||[], level: r.level||"cet4", created:Date.now(), updatedAt:Date.now(), deviceId, deleted:false };
-  cogExpr.push(expr); r.expressionId = expr.id; r.updatedAt = Date.now();
+  const expr = { id: uid(), cn, en: j.english||"", sourceBook:bookTitleOf(a.bookId), sourceBookId:a.bookId||"", annotationId: a.id, words: j.words||[], level:"cet4", created:Date.now(), updatedAt:Date.now(), deviceId, deleted:false };
+  cogExpr.push(expr);
+  updateAnno(a.id, { exprId: expr.id });
   saveCog(); renderCogAnno(); renderCogExpr(); toast("已生成英文表达");
 }
 
@@ -4055,10 +4840,21 @@ async function callAI(task, text, level){
 }
 
 /* ---- 阅读空间 / 批注 / 表达 事件绑定 ---- */
-$("#cogReadingEditBook").onclick = ()=> openCogBook(cogReadingBookId);
-$("#cogReadingFab").onclick = ()=> openCogAnno(null, cogReadingBookId, "");
-$("#cogAnnoFab").onclick = ()=> openCogAnno(null, null, "");
+$("#cogReadingEditBook").onclick = ()=>{ if(cogReadingBookId) openBookInfo(cogReadingBookId); };
+$("#cogReadingFab").onclick = ()=> openAnnoEditor({ type:'idea', bookId:cogReadingBookId, page:pdfCurrentPage||0, startOffset:-1, endOffset:-1, pageTextLen:0, selectedText:'' });
+$("#cogAnnoFab").onclick = ()=> openAnnoEditor({ type:'idea', bookId:(annoFilterBookId||cogReadingBookId||""), page:0, startOffset:-1, endOffset:-1, pageTextLen:0, selectedText:'' });
 $("#cogExprFab").onclick = ()=> openCogAnno(null, null, "");
+$("#cogBookInfoRead").onclick = ()=>{ if(bookInfoId) openBookReader(bookInfoId); };
+/* 批注编辑弹窗 */
+$("#aeSave").onclick = saveAnnoEditor;
+$("#aeCancel").onclick = closeAnnoEditor;
+$("#aeDelete").onclick = deleteAnnoEditor;
+$("#annoEditorModal").addEventListener("click", e=>{ if(e.target.id==="annoEditorModal") closeAnnoEditor(); });
+/* 换封面弹窗 */
+$("#cpSave").onclick = ()=>{ const u = $("#cpUrl").value.trim(); if(u && !/^(https?:\/\/|data:image\/)/i.test(u)){ toast("请填 https:// 或 data:image/ 开头的地址"); return; } applyCover(u || "📕"); };
+$("#cpClear").onclick = ()=> applyCover("");
+$("#cpCancel").onclick = closeCoverPick;
+$("#coverPickModal").addEventListener("click", e=>{ if(e.target.id==="coverPickModal") closeCoverPick(); });
 $("#caGen").onclick = caGenerate;
 $("#cogAnnoSave").onclick = saveCogAnno;
 $("#cogAnnoCancel").onclick = closeCogAnno;
@@ -4068,7 +4864,7 @@ document.addEventListener("click", e=>{ if(!e.target.closest(".vocab-pop") && !e
 
 /* ============ 导出 ============ */
 $("#exportBtn").onclick = ()=>{
-  const data = { export_at:new Date().toISOString(), times, ideas, notes, diary, cog_reads:cogReads, cog_books:cogBooks, cog_thoughts:cogThoughts, cog_reviews:cogReviews, cog_expr:cogExpr, directions, reviews };
+  const data = { export_at:new Date().toISOString(), times, ideas, notes, diary, cog_reads:cogReads, cog_books:cogBooks, cog_thoughts:cogThoughts, cog_reviews:cogReviews, cog_expr:cogExpr, cog_annos:cogAnnos, directions, reviews };
   const blob = new Blob([JSON.stringify(data,null,2)], {type:"application/json"});
   const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
   a.download="workbench-backup-"+todayStr()+".json"; a.click(); toast("已导出备份");
@@ -4141,18 +4937,21 @@ async function pullSync(){
       cogThoughts = mergeRecords(cogThoughts, j.payload.cog_thoughts);
       cogReviews = mergeRecords(cogReviews, j.payload.cog_reviews);
       cogExpr = mergeRecords(cogExpr, j.payload.cog_expr||[]);
+      cogAnnos = mergeRecords(cogAnnos, j.payload.cog_annos||[]);
       directions = mergeRecords(directions, j.payload.directions||[]).map(normDir);
       reviews = mergeRecords(reviews, j.payload.reviews||[]).map(normReview);
       if(j.payload.settings && j.payload.settings.theme) applyTheme(j.payload.settings.theme);
+      migrateHighlightsToAnnos();   // 云端可能推下来其他端的旧高亮记录，同样走一次迁移（确定性 id，幂等）
       persistTimes(); persistIdeas(); persistNotes(); persistDiary(); persistCog(); persistDirections(); persistReviews();   // 仅本地落盘，不触发回传，避免同步风暴
     }
     if(j.updated) LS.set("wb_sync_at", j.updated);
     refreshAll();
+    repaintRenderedPages(cogReadingBookId);   // 云端回推的批注即时上色
   }catch(e){}
 }
 async function pushSync(){
   if(!apiToken) return null;
-  const payload = { times, ideas, notes, diary, cog_reads:cogReads, cog_books:cogBooks, cog_thoughts:cogThoughts, cog_reviews:cogReviews, cog_expr:cogExpr, directions, reviews, settings:{ theme: document.documentElement.getAttribute("data-theme")||"light" } };
+  const payload = { times, ideas, notes, diary, cog_reads:cogReads, cog_books:cogBooks, cog_thoughts:cogThoughts, cog_reviews:cogReviews, cog_expr:cogExpr, cog_annos:cogAnnos, directions, reviews, settings:{ theme: document.documentElement.getAttribute("data-theme")||"light" } };
   try{
     const r = await fetch("/api/sync/push", {method:"POST", headers:apiHeaders(), body:JSON.stringify({payload})});
     const j = await r.json().catch(()=>({}));
@@ -4345,6 +5144,7 @@ if(apiToken){ pullSync(); startSyncStream(); }
 loadWbConfig();   // 拉取服务端配置（是否需邀请码注册、第三方登录是否可用）
 renderNotes();    // 待办首屏渲染
 fillCogCats();   // 认知资产：填充分类下拉
+migrateHighlightsToAnnos();   // 旧 cogReads[kind=annotation] → cogAnnos（确定性 id，重复执行幂等）
 renderCogHome(); renderCogReads(); renderCogBooks(); renderCogThoughts(); renderCogReviews(); renderCogAnno(); renderCogExpr();
 </script>
 </body>

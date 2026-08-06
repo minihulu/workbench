@@ -897,7 +897,7 @@ class Handler(BaseHTTPRequestHandler):
         row = conn.execute("SELECT payload,updated FROM sync WHERE uid=?", (uid,)).fetchone()
         conn.close()
         if not row or not row["payload"]:
-            return self._send_json(200, {"payload": {"times": [], "ideas": [], "notes": [], "diary": [], "cog_reads": [], "cog_books": [], "cog_thoughts": [], "cog_reviews": [], "directions": [], "reviews": [], "settings": {}},
+            return self._send_json(200, {"payload": {"times": [], "ideas": [], "notes": [], "diary": [], "cog_reads": [], "cog_books": [], "cog_thoughts": [], "cog_reviews": [], "cog_expr": [], "cog_annos": [], "directions": [], "reviews": [], "settings": {}},
                                          "updated": row["updated"] if row else 0})
         try:
             payload = json.loads(row["payload"])
@@ -925,6 +925,8 @@ class Handler(BaseHTTPRequestHandler):
         inc_cog_books = inc.get("cog_books") or []
         inc_cog_thoughts = inc.get("cog_thoughts") or []
         inc_cog_reviews = inc.get("cog_reviews") or []
+        inc_cog_expr = inc.get("cog_expr") or []
+        inc_cog_annos = inc.get("cog_annos") or []
         inc_directions = inc.get("directions") or []
         inc_reviews = inc.get("reviews") or []
         inc_settings = inc.get("settings") or {}
@@ -946,6 +948,8 @@ class Handler(BaseHTTPRequestHandler):
                 "cog_books": merge_records(cur.get("cog_books") or [], inc_cog_books),
                 "cog_thoughts": merge_records(cur.get("cog_thoughts") or [], inc_cog_thoughts),
                 "cog_reviews": merge_records(cur.get("cog_reviews") or [], inc_cog_reviews),
+                "cog_expr": merge_records(cur.get("cog_expr") or [], inc_cog_expr),
+                "cog_annos": merge_records(cur.get("cog_annos") or [], inc_cog_annos),
                 "directions": merge_records(cur.get("directions") or [], inc_directions),
                 "reviews": merge_records(cur.get("reviews") or [], inc_reviews),
                 "settings": {**(cur.get("settings") or {}),

@@ -1,0 +1,222 @@
+classDiagram
+    direction LR
+
+    %% ================= 数据模型 =================
+    class CogAnno {
+        +String id
+        +String bookId
+        +Number page
+        +Number startOffset
+        +Number endOffset
+        +Number pageTextLen
+        +String selectedText
+        +String type
+        +String color
+        +String text
+        +String exprId
+        +Number createdAt
+        +Number updatedAt
+        +String deviceId
+        +Boolean deleted
+    }
+    note for CogAnno "顶层独立数组 cogAnnos，与 cogReads/cogBooks 平级\ntype: highlight | comment | idea\ncolor: yellow|green|blue|pink|purple\nidea 型允许 startOffset=-1（弱绑定，不落页面）"
+
+    class CogBook {
+        +String id
+        +String title
+        +String author
+        +String cat
+        +String cover
+        +Boolean coverAuto
+        +String status
+        +Number progress
+        +Boolean progressAuto
+        +Number lastPage
+        +Number totalPages
+        +Number lastReadAt
+        +String lastPosition
+        +Object file
+        +Array excerpts
+        +Number updatedAt
+        +String deviceId
+        +Boolean deleted
+    }
+
+    class CogRead {
+        +String id
+        +String kind
+        +String book
+        +String sourceBookId
+        +String original
+        +String understanding
+        +Boolean highlight
+        +Number page
+        +Boolean migratedToAnno
+        +Number updatedAt
+        +Boolean deleted
+    }
+    note for CogRead "遗留结构。kind=annotation 的记录一次性迁移到 CogAnno，\n原记录保留并打 migratedToAnno=true（不删，防多端半迁移丢数据）"
+
+    class CogExpr {
+        +String id
+        +String cn
+        +String en
+        +String annotationId
+        +String sourceBookId
+        +Array words
+    }
+
+    %% ================= 锚定引擎 =================
+    class AnchorEngine {
+        +buildPageIndex(layerEl) PageIndex
+        +rangeToOffsets(range, index) OffsetPair
+        +resolveAnnoRange(anno, index) OffsetPair
+        +allIndexOf(hay, needle) Array
+        +getPageLayer(page) Element
+    }
+    note for AnchorEngine "锚定坐标系 = textLayer 内 span 的 DOM 序 textContent 拼接串。\n写入与读取共用同一坐标系，天然自洽。\n三级命中：offset精确 → pageTextLen校验失败则就近indexOf → 放弃"
+
+    class PageIndex {
+        +Array~Element~ spans
+        +Array~Number~ starts
+        +String full
+        +Number len
+    }
+
+    class OffsetPair {
+        +Number start
+        +Number end
+        +Boolean exact
+    }
+
+    %% ================= 渲染层 =================
+    class AnnoRenderer {
+        +applyAnnos(bookId, page) void
+        +clearAnnoMarks(layerEl) void
+        +paintOne(index, anno) void
+        +ensureMarkerLayer(pageDiv) Element
+        +repaintRenderedPages(bookId) void
+        +annoCountOf(bookId, page) Number
+    }
+    note for AnnoRenderer "角标不能用 span::after（span 带 matrix 变换会把角标一起缩放），\n必须画在独立的 .annoMarkers 覆盖层上，按 span 的 offsetRect 定位"
+
+    %% ================= 交互层 =================
+    class SelectionToolbar {
+        +bindPdfSelection(pagesEl, book) void
+        +showToolbar(range, page) void
+        +removeToolbar() void
+        +onHighlight() void
+        +onComment() void
+        +onIdea() void
+        +onCopy() void
+    }
+
+    class AnnoEditor {
+        +openAnnoEditor(draft) void
+        +saveAnnoEditor() void
+        +deleteAnnoEditor() void
+        +closeAnnoEditor() void
+    }
+    note for AnnoEditor "轻量弹窗：引用原文(只读) + 正文 textarea + 5色条 + 保存/删除。\n不复用 openCogAnno（那是6字段英文表达重窗，保留原用途）"
+
+    class AnnoPopover {
+        +openAnnoPopover(annoId, anchorEl) void
+        +closeAnnoPopover() void
+        +onRecolor(color) void
+    }
+
+    class AnnoSidebar {
+        +renderAnnoSidebar(bookId) void
+        +switchTocTab(tab) void
+        +jumpToAnno(annoId) void
+    }
+
+    %% ================= 存储 / 同步 =================
+    class AnnoStore {
+        +Array~CogAnno~ cogAnnos
+        +addAnno(draft) CogAnno
+        +updateAnno(id, patch) CogAnno
+        +removeAnno(id) void
+        +annosOf(bookId, page) Array
+        +persistAnnos() void
+        +saveAnnos() void
+        +migrateHighlightsToAnnos() Number
+    }
+    note for AnnoStore "迁移 id 采用确定性构造 'mg_' + 旧id，\n多端各自迁移生成同 id，mergeRecords 天然幂等去重"
+
+    class SyncGateway {
+        +pullSync() void
+        +pushSync() void
+        +mergeRecords(local, inc) Array
+        +scheduleSync() void
+    }
+
+    class ServerSync {
+        +RECORD_KEYS Array
+        +push_payload(uid, inc) Number
+        +pull_payload(uid) Object
+    }
+    note for ServerSync "server.py + supabase_store.py 必须新增 cog_annos 键，\n否则前端推上去会被服务端白名单静默丢弃（cog_expr 现已中招）"
+
+    %% ================= 书架 =================
+    class ShelfView {
+        +renderCogShelf(box, limit, preview) void
+        +bookCoverHtml(book) String
+        +bookProgressOf(book) Number
+        +openBookReader(bookId) void
+        +bindLongPress(el, bookId) void
+    }
+
+    class BookMenu {
+        +openBookMenu(bookId, x, y) void
+        +actResume() void
+        +actInfo() void
+        +actAnnos() void
+        +actCover() void
+        +actDelete() void
+    }
+
+    class BookInfoScreen {
+        +openBookInfo(bookId) void
+        +renderBookInfo() void
+        +saveBookInfo() void
+    }
+
+    class PdfReader {
+        +renderPdfBook(book, source) void
+        +renderPage(doc, total, pagesEl, b, n) void
+        +renderScrollPage(doc, total, pagesEl, b, n) void
+        +buildTextLayer(textContent, viewport) Element
+        +pdfRelayout(doc, total, pagesEl, b) void
+        +saveBookProgress(book, n) void
+    }
+
+    %% ================= 关系 =================
+    CogAnno "0..*" --> "1" CogBook : bookId 外键
+    CogAnno "0..1" --> "0..1" CogExpr : exprId 双向弱引用
+    CogRead ..> CogAnno : 一次性迁移
+    AnnoStore "1" o-- "0..*" CogAnno : 持有
+    AnnoStore --> SyncGateway : saveAnnos 触发 scheduleSync
+    SyncGateway --> ServerSync : cog_annos 字段
+    AnchorEngine --> PageIndex : 构建
+    AnchorEngine --> OffsetPair : 产出
+    AnnoRenderer --> AnchorEngine : 依赖命中
+    AnnoRenderer --> AnnoStore : 读取 annosOf
+    SelectionToolbar --> AnchorEngine : rangeToOffsets
+    SelectionToolbar --> AnnoStore : addAnno
+    SelectionToolbar --> AnnoEditor : 评论/想法
+    SelectionToolbar --> AnnoRenderer : 落批注后重绘
+    AnnoEditor --> AnnoStore : 增改删
+    AnnoEditor --> AnnoRenderer : 保存后重绘
+    AnnoPopover --> AnnoStore : 换色/删除
+    AnnoPopover --> AnnoRenderer : 变更后重绘
+    AnnoSidebar --> AnnoStore : 列表
+    AnnoSidebar --> PdfReader : 跳页
+    PdfReader --> AnnoRenderer : 每页渲染完调用 applyAnnos
+    PdfReader --> AnchorEngine : buildTextLayer 打 data-page 标
+    ShelfView --> PdfReader : 点封面直达阅读器
+    ShelfView --> BookMenu : 长按/右键
+    BookMenu --> BookInfoScreen : 书籍信息
+    BookMenu --> AnnoSidebar : 批注
+    BookInfoScreen --> CogBook : 编辑
+    PdfReader --> CogBook : saveBookProgress 写 lastPage/progress

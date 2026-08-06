@@ -1,0 +1,161 @@
+sequenceDiagram
+    autonumber
+    actor U as 用户
+    participant SH as ShelfView 书架
+    participant RS as openCogReadingSpace 屏5
+    participant PR as PdfReader
+    participant TL as buildTextLayer
+    participant AE as AnchorEngine
+    participant AR as AnnoRenderer
+    participant ST as AnnoStore cogAnnos
+    participant TB as SelectionToolbar
+    participant ED as AnnoEditor 轻量弹窗
+    participant PO as AnnoPopover 气泡
+    participant SY as SyncGateway
+    participant SV as Server cog_annos
+
+    %% ========== 流程 0：冷启动数据迁移 ==========
+    rect rgb(245,245,250)
+    Note over ST: 流程0 冷启动：旧高亮一次性迁移
+    ST->>ST: cogAnnos = LS.get("wb_cog_annos", [])
+    ST->>ST: migrateHighlightsToAnnos()
+    loop cogReads 中 kind=annotation 且未迁移
+        ST->>ST: 构造 id = "mg_" + 旧id（确定性，多端幂等）
+        ST->>ST: highlight&&无理解→type=highlight；有理解→comment；无page→idea
+        ST->>ST: startOffset=-1 endOffset=-1 pageTextLen=0（走就近indexOf兜底）
+        ST->>ST: 旧记录打 migratedToAnno=true + updatedAt
+    end
+    ST->>SY: saveAnnos() → scheduleSync()
+    end
+
+    %% ========== 流程 3：点封面 → 进阅读器 ==========
+    rect rgb(240,250,244)
+    Note over U,PR: 流程3 点封面直达阅读器（不再落表单）
+    U->>SH: 点击书籍封面卡
+    SH->>RS: openBookReader(bookId)
+    RS->>RS: setCogScreen(5)；屏5 只剩顶栏 + #crFileBox
+    RS->>RS: renderCogReadingFile() → callBookSign(path)
+    RS->>PR: renderPdfBook(b, signedUrl)
+    PR->>PR: startPage = clamp(b.lastPage || 1, 1, total)
+    alt 滚动模式
+        PR->>PR: layoutScroll() 建 total 个 slot + IntersectionObserver
+        PR->>PR: 可视页触发 renderScrollPage(n)
+    else 单页模式
+        PR->>PR: renderPage(n)
+    end
+    PR->>TL: buildTextLayer(textContent, lVp)
+    TL-->>PR: layer（打标 layer.dataset.page = n）
+    PR->>AR: applyAnnos(bookId, n)
+    AR->>AE: getPageLayer(n) → buildPageIndex(layer)
+    AE-->>AR: PageIndex{spans, starts, full, len}
+    AR->>ST: annosOf(bookId, n)
+    ST-->>AR: [CogAnno...]
+    loop 每条批注
+        AR->>AE: resolveAnnoRange(anno, index)
+        alt pageTextLen === index.len 且 startOffset>=0
+            AE-->>AR: {start, end, exact:true} 精确命中
+        else 文本流漂移 / 迁移数据
+            AE->>AE: allIndexOf(full, selectedText) 取离 startOffset 最近的一处
+            AE-->>AR: {start, end, exact:false} 或 null（静默跳过，绝不报错）
+        end
+        AR->>AR: 命中区间内的 span 加 .anno + data-color + data-anno-id
+        opt type 为 comment/idea
+            AR->>AR: 在 .annoMarkers 覆盖层画角标（不用 span::after，避开 matrix 缩放）
+        end
+    end
+    PR->>PR: saveBookProgress(b, startPage) → progress = round(n/total*100)
+    end
+
+    %% ========== 流程 1：选中文字 → 工具栏 → 落批注 → 上色 ==========
+    rect rgb(255,250,240)
+    Note over U,AR: 流程1 选中文字 → 工具栏 → 落批注 → 渲染上色
+    U->>TB: mouseup（桌面）/ touchend 延时250ms（移动长按选词）
+    TB->>TB: sel = window.getSelection()；range = sel.getRangeAt(0)
+    TB->>AE: 由 range.startContainer 上溯定位所属 span 与所在页 layer
+    AE->>AE: buildPageIndex(layer)
+    AE->>AE: startOffset = starts[i] + range.startOffset（同理 endOffset）
+    AE-->>TB: {page, startOffset, endOffset, pageTextLen, selectedText = full.slice(s,e)}
+    Note right of AE: 关键：selectedText 用 full.slice 切片得到，<br/>不用 sel.toString()，保证与锚定坐标系逐字一致
+    TB->>TB: showToolbar(rect) position:fixed + 视口边界夹取
+    TB-->>U: 🖍高亮 ｜ 💬评论 ｜ 💡想法 ｜ 📋复制 ｜ ✕
+    alt 点 🖍高亮
+        TB->>ST: addAnno({type:"highlight", color:lastUsedColor, ...draft})
+        ST->>SY: saveAnnos() → persistAnnos + scheduleSync
+        TB->>AR: applyAnnos(bookId, page)
+        AR-->>U: 立即上色
+    else 点 💬评论 / 💡想法
+        TB->>ED: openAnnoEditor(draft{type, 引用原文, 5色条})
+        U->>ED: 输入正文 + 选色 → 保存
+        ED->>ST: addAnno / updateAnno
+        ST->>SY: saveAnnos()
+        ED->>AR: applyAnnos(bookId, page)
+        AR-->>U: 上色 + 角标
+    else 点 📋复制
+        TB->>TB: navigator.clipboard.writeText(selectedText)
+    end
+    SY->>SV: pushSync({payload:{..., cog_annos}})
+    SV-->>SY: merge_records 落库 + notify(uid,"sync")
+    end
+
+    %% ========== 流程 2：点击批注 → 气泡 ==========
+    rect rgb(250,244,255)
+    Note over U,AR: 流程2 点击已有批注 → 气泡（查看/编辑/删除/换色）
+    U->>AR: 点击 span.anno[data-anno-id]
+    AR->>PO: openAnnoPopover(annoId, spanEl)
+    PO->>ST: cogAnnos.find(id)
+    PO-->>U: 原文摘要 + 正文 + ✏️编辑 🎨5色点 🗑删除 ✕
+    alt 换色
+        U->>PO: 点色点
+        PO->>ST: updateAnno(id, {color, updatedAt})
+        PO->>AR: applyAnnos(bookId, page)
+    else 编辑
+        PO->>ED: openAnnoEditor({annoId})
+    else 删除
+        PO->>ST: removeAnno(id) → deleted=true + updatedAt（软删）
+        PO->>AR: applyAnnos(bookId, page) 重绘去色
+    end
+    ST->>SY: saveAnnos() → scheduleSync
+    end
+
+    %% ========== 流程 4：长按 / 右键 → 管理菜单 ==========
+    rect rgb(240,248,255)
+    Note over U,SH: 流程4 书架长按 / 右键 → 管理菜单
+    U->>SH: touchstart 保持 600ms（移动）/ contextmenu（桌面）
+    SH->>SH: 抑制本次 click（防止长按后又跳阅读器）
+    SH->>SH: openBookMenu(bookId, x, y)
+    SH-->>U: ▶继续阅读 ｜ ℹ️书籍信息 ｜ 📝批注 ｜ 🖼换封面 ｜ 🗑删除
+    alt 继续阅读
+        SH->>RS: openBookReader(bookId)
+    else 书籍信息
+        SH->>SH: openBookInfo(bookId) → setCogScreen(8) 二级页（状态/进度/位置/片段/文件）
+    else 批注
+        SH->>RS: openBookReader(bookId) 并打开批注侧栏
+    else 换封面
+        SH->>SH: 换封面弹窗（emoji 选择 / 图片URL / 用PDF首页）
+    else 删除
+        SH->>SH: 二次确认 → delCogBook（软删，级联软删该书 cogAnnos）
+    end
+    end
+
+    %% ========== 流程 5：resize / 缩放 / 切模式 / 云端回推 → 批注重绘 ==========
+    rect rgb(255,245,245)
+    Note over PR,AR: 流程5 重排与远端更新后的批注重绘
+    alt 窗口 resize / 缩放 / 切换单页-滚动
+        U->>PR: resize（debounce 200ms）/ onPdfZoom / pdfModeBtn
+        PR->>PR: pdfRelayout() → 重跑 renderPage / renderScrollPage
+        PR->>TL: 重建 textLayer（span 全新）
+        PR->>AR: applyAnnos(bookId, n)
+        Note right of AR: offset 只与文本流有关，与 scale/dpr/模式无关，<br/>重排后必然精确复原
+    else 显存回收后重新进入可视区
+        PR->>PR: pdfEvictFarPages 清空 slot → IO 再次触发 renderScrollPage
+        PR->>AR: applyAnnos(bookId, n)
+    else 多端云端回推
+        SV-->>SY: SSE type=sync
+        SY->>SY: pullSync() → cogAnnos = mergeRecords(cogAnnos, payload.cog_annos)
+        SY->>AR: repaintRenderedPages(currentBookId)
+        loop pdfRendered 中每一页
+            AR->>AR: clearAnnoMarks(layer) 再 applyAnnos(bookId, n)
+        end
+        SY->>SH: renderCogShelf 刷新进度与批注计数
+    end
+    end

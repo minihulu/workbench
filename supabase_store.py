@@ -35,6 +35,7 @@ PUSH_MAX_RETRY = 5
 
 RECORD_KEYS = ["times", "ideas", "notes", "diary",
                "cog_reads", "cog_books", "cog_thoughts", "cog_reviews",
+               "cog_expr", "cog_annos",
                "directions", "reviews"]
 EMPTY_PAYLOAD = {**{k: [] for k in RECORD_KEYS}, "settings": {}}
 
