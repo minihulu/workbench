@@ -3343,7 +3343,7 @@ async function ensurePdfJs(){
 let pdfDoc=null, pdfTotal=0, pdfScale=1.4;
 let pdfFitScale=1.4, pdfZoom=1;
 let pdfBook=null, pdfPagesEl=null, pdfSourceRaw=null;
-let pdfMode='page', pdfPageDivs={}, pdfRendered=new Set(), pdfIO=null;
+let pdfMode='scroll', pdfPageDivs={}, pdfRendered=new Set(), pdfIO=null;
 let pdfVisible=new Set();               // 滚动模式下当前处于可视区（含 IO rootMargin）的页码
 let _pdfCacheDB=null;
 function openPdfCacheDB(){ return new Promise((res)=>{ try{ if(_pdfCacheDB) return res(_pdfCacheDB); const r=indexedDB.open('wb_pdf_cache',1); r.onupgradeneeded=()=>{ try{ r.result.createObjectStore('pdfs'); }catch(_){} }; r.onsuccess=()=>{ _pdfCacheDB=r.result; res(r.result); }; r.onerror=()=>{ res(null); }; }catch(e){ res(null); } }); }
