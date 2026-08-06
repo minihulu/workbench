@@ -3702,6 +3702,7 @@ let pdfCurrentPage = 1;
 let pdfJumpTo = null;     // 从批注列表跳转指定页
 let pdfAnnoFilter = 'all';   // 阅读器内批注侧栏的类型筛选：all / highlight / comment / idea
 let _pdfSelBound = false;
+let pdfSuppressSave = false;  // 续读 restore 期间抑制 scrollSpy 的进度保存，避免把 lastPage 覆盖回 1
 
 async function renderPdfBook(b, source){
   const lib = await ensurePdfJs();
@@ -3765,6 +3766,7 @@ async function renderPdfBook(b, source){
   const startPage = Math.min(Math.max(1, (b&&b.lastPage)||pdfJumpTo||1), total);
   pdfJumpTo = null;
   pdfCurrentPage = startPage;
+  pdfSuppressSave = true;            // 续读 restore 期间先抑制进度保存，等滚动/首屏稳定后再放开（见 layoutScroll 与下方兜底）
   const pagesEl = $("#pdfPages");
   pdfPagesEl = pagesEl;
   bindPdfToolbar(doc, total, pagesEl, b);
@@ -3776,6 +3778,9 @@ async function renderPdfBook(b, source){
   } else {
     await renderPage(doc, total, pagesEl, b, startPage);
   }
+  // 兜底：无论单页还是滚动模式，restore 完成（首屏渲染 + 程序滚动 settle）后放开进度保存。
+  // 滚动模式下 layoutScroll 的 rAF 内也会再放开一次；此处保证单页模式同样能清除标志。
+  setTimeout(()=>{ pdfSuppressSave = false; }, 600);
   bindPdfSelection(pagesEl, b);
 }
 
@@ -3803,7 +3808,7 @@ function bindPdfToolbar(doc, total, pagesEl, b){
   $("#pdfModeBtn").onclick = ()=>{
     pdfMode = pdfMode==='page' ? 'scroll' : 'page';
     $("#pdfModeBtn").textContent = pdfMode==='page' ? '📜 滚动' : '📄 单页';
-    if(pdfMode==='scroll') layoutScroll(doc,total,pagesEl,b,pdfCurrentPage);
+    if(pdfMode==='scroll'){ pdfSuppressSave = true; layoutScroll(doc,total,pagesEl,b,pdfCurrentPage); }   // 切到滚动模式前先上锁，避免程序 scrollIntoView settle 前 scrollSpy 把 lastPage 打回 1
     else renderPage(doc,total,pagesEl,b,pdfCurrentPage);
   };
   // 缩放倍率以「适应宽度」为 100% 基线：pdfZoom=1 即页面正好铺满阅读容器
@@ -4018,7 +4023,7 @@ function layoutScroll(doc, total, pagesEl, b, startPage){
   }, { root: pagesEl, rootMargin: '400px' });
   Object.values(pdfPageDivs).forEach(d=>pdfIO.observe(d));
   setupScrollSpy(doc, total, pagesEl, b);
-  requestAnimationFrame(()=>{ const s=pdfPageDivs[startPage]; if(s) s.scrollIntoView(); updatePdfPageInfo(total); });
+  requestAnimationFrame(()=>{ const s=pdfPageDivs[startPage]; if(s) s.scrollIntoView(); updatePdfPageInfo(total); setTimeout(()=>{ pdfSuppressSave = false; }, 600); });
 }
 async function renderScrollPage(doc, total, pagesEl, b, n){
   if(pdfRendered.has(n)) return;
@@ -4657,6 +4662,7 @@ function bookTitleOf(bookId){ const b = cogBooks.find(x=>x.id===bookId); return 
 let _lastPageSaveT = null;
 function saveBookProgress(b, n){
   if(!b) return;
+  if(pdfSuppressSave) return;   // 续读 restore 期间抑制保存，避免程序滚动 settle 前 scrollSpy 把 lastPage 覆盖回 1
   b.lastPage = n; b.lastReadAt = Date.now(); b.updatedAt = Date.now();
   if(pdfTotal > 0){
     b.totalPages = pdfTotal;
