@@ -35,6 +35,14 @@ function sliceBetween(src, startMarker, endMarker, label) {
   return src.slice(a, b);
 }
 
+// 区块 0：PDF 阅读器共享状态 —— 直接抽真实源码，避免 fixture 里手抄一份后与源码静默漂移
+// （曾经手抄成 pdfMode='page'，源码改成 'scroll' 后 fixture 毫无察觉）
+const REGION_STATE = sliceBetween(
+  HTML,
+  'let pdfDoc=null, pdfTotal=0, pdfScale=1.4;',
+  'let _pdfCacheDB=null;',
+  'state'
+).replace(/\blet\b/g, 'var');
 // 区块 1：容器测宽 / scale / dpr / 回收 / 重排 / resize / 渲染
 const REGION_CORE = sliceBetween(
   HTML,
@@ -120,6 +128,9 @@ function loadSandbox(opts = {}) {
     devicePixelRatio = 1,
     scrollbarWidth = 0,
     spanOffsetWidth = 10,
+    // 本文件的既有用例以「单页模式」为基线，故显式钉住；
+    // 源码真实默认值（滚动）由 tests/pdf-default-mode.test.mjs 专门守护
+    mode = 'page',
   } = opts;
 
   const calls = {
@@ -189,13 +200,10 @@ function loadSandbox(opts = {}) {
   vm.createContext(sandbox);
 
   const prelude = `
-    // ── 被测区块外部的全局状态（与 workbench.html L3363-3374 保持一致）──
-    var pdfDoc=null, pdfTotal=0, pdfScale=1.4;
-    var pdfFitScale=1.4, pdfZoom=1;
-    var pdfBook=null, pdfPagesEl=null, pdfSourceRaw=null;
-    var pdfMode='page', pdfPageDivs={}, pdfRendered=new Set(), pdfIO=null;
-    var pdfVisible=new Set();
+    // ── 被测区块外部的全局状态：整段抽自 workbench.html 真实声明 ──
+${REGION_STATE}
     var pdfCurrentPage=1, pdfJumpTo=null;
+    pdfMode = ${JSON.stringify(mode)};   // 本文件基线：单页模式
     // ── 被测区块外部依赖的函数：桩 ──
     var __els={};
     function $(sel){ return __els[sel] || null; }

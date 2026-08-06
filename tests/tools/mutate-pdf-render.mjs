@@ -6,7 +6,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 
-const ROOT = path.resolve(import.meta.dirname, '..');
+// 本文件在 tests/tools/ 下，仓库根要往上两级（早前写成一级，脚本一跑就 ENOENT）
+const ROOT = path.resolve(import.meta.dirname, '..', '..');
 const SRC = fs.readFileSync(path.join(ROOT, 'workbench.html'), 'utf8');
 
 const MUTANTS = [
@@ -63,6 +64,7 @@ const MUTANTS = [
 ];
 
 const tmp = path.join(ROOT, '.qa-tmp');
+fs.mkdirSync(tmp, { recursive: true });
 let killed = 0, survived = [];
 
 for (const m of MUTANTS) {

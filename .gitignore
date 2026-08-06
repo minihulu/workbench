@@ -46,3 +46,6 @@ _site/
 
 # 临时解压/打包残留（手动清理用，不入库）
 _trash/
+
+# 变异测试 / 语法校验的临时产物（tests/tools/mutate-*.mjs 生成）
+.qa-tmp/
