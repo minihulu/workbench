@@ -432,9 +432,6 @@
   .file-present .fp-act{display:flex; gap:8px; margin-top:8px;}
   .text-box{margin:10px 0; border-radius:12px; border:1px solid var(--line); background:var(--card); padding:14px; max-height:420px; overflow:auto;}
   .text-box pre{margin:0; font-size:13px; line-height:1.7; white-space:pre-wrap; word-break:break-word; font-family:ui-monospace,monospace;}
-  .read-sediment{margin-top:22px; padding-top:18px; border-top:1px dashed var(--line);}
-  .read-sediment h3{font-size:15px; margin:0 0 10px; color:var(--brand);}
-  .read-sediment textarea{width:100%; min-height:64px; margin-bottom:8px;}
   .read-status-row{display:flex; align-items:center; gap:10px; margin:8px 0;}
   .read-status-row select{flex:1; max-width:200px;}
   .read-file-source{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; margin:8px 0 10px; border:1.5px dashed #d4d7e3; border-radius:12px; background:linear-gradient(180deg, #fafbff 0%, #ffffff 100%);}
@@ -1297,9 +1294,6 @@
             <button class="btn" id="cbdEdit" style="flex:none;">✏️ 编辑书籍</button>
           </div>
           <div id="cbdMeta" style="margin:8px 0 14px;"></div>
-          <div class="line-block"><div class="lab">最终总结</div><div class="val" id="cbdSummary" style="white-space:pre-wrap;"></div></div>
-          <div class="line-block"><div class="lab">核心观点</div><div class="val" id="cbdViews" style="white-space:pre-wrap;"></div></div>
-          <div class="line-block"><div class="lab">我的评价</div><div class="val" id="cbdReview" style="white-space:pre-wrap;"></div></div>
           <h2 style="margin:16px 0 8px;font-size:15px;">📖 关联阅读记录</h2>
           <div id="cbdRecords"></div>
           <div style="text-align:right;margin-top:14px;">
@@ -3050,9 +3044,6 @@ function openCogBookDetail(id){
   const records = cogReads.filter(r=>!r.deleted && r.book===b.title).slice().sort((a,b2)=>(b2.date||"").localeCompare(a.date||""));
   $("#cbdTitle").textContent = b.title;
   $("#cbdMeta").innerHTML = `${b.author?esc(b.author)+" · ":""}${bookStatusBadge(b.status)} ${b.cat?`<span class="cat-tag">${esc(b.cat)}</span>`:""}`;
-  $("#cbdSummary").textContent = b.summary||"（未填写）";
-  $("#cbdViews").textContent = b.viewpoints||"（未填写）";
-  $("#cbdReview").textContent = b.review||"（未填写）";
   $("#cbdRecords").innerHTML = records.length ? records.map(r=>`
     <div class="item" data-open-read="${r.id}">
       <div class="main">
@@ -3234,16 +3225,7 @@ function renderCogReading(){
       <button class="btn sm" id="crExcerptAdd">＋ 添加片段</button>
     </div>
     <div id="cogExcerptList" style="margin-top:10px;"></div>
-    <div class="read-sediment">
-      <h3>🌱 读后沉淀</h3>
-      <label class="fld">最终总结</label>
-      <textarea id="crSummary" placeholder="读完后的一句话总结">${esc(b.summary||"")}</textarea>
-      <label class="fld" style="margin-top:8px;">核心观点</label>
-      <textarea id="crViews" placeholder="这本书最值得记住的几个观点">${esc(b.viewpoints||"")}</textarea>
-      <label class="fld" style="margin-top:8px;">我的评价</label>
-      <textarea id="crReview" placeholder="给这本书的评分 / 适用人群 / 读后感">${esc(b.review||"")}</textarea>
-      <button class="btn sm" id="crSedimentSave" style="margin-top:6px;">💾 保存沉淀</button>
-    </div>`;
+    `;
   // 状态
   $("#crStatus").value = status;
   // 进度
@@ -3255,8 +3237,6 @@ function renderCogReading(){
   $("#crPos").onblur = saveCogProgress;
   // 状态
   $("#crStatus").onchange = saveCogProgress;
-  // 沉淀
-  $("#crSedimentSave").onclick = saveCogSediment;
   // 片段
   $("#crExcerptAdd").onclick = ()=>{
     const t = $("#crExcerpt").value.trim(); if(!t){ toast("先粘贴读到的内容"); return; }
@@ -3927,16 +3907,6 @@ function saveCogProgress(){
   saveCog(); renderCogHome();
   if(cogScreen===5) $("#crProgVal") && ($("#crProgVal").textContent = p + "%");
 }
-function saveCogSediment(){
-  const b = cogBooks.find(x=>x.id===cogReadingBookId); if(!b) return;
-  b.summary = $("#crSummary").value.trim();
-  b.viewpoints = $("#crViews").value.trim();
-  b.review = $("#crReview").value.trim();
-  b.updatedAt = Date.now();
-  saveCog(); renderCogHome();
-  toast("已保存沉淀");
-}
-
 /* ---- 阅读批注：我的思考（弹窗） ---- */
 function openCogAnno(id, bookId, origText, page){
   const x = id ? cogReads.find(r=>r.id===id) : null;
