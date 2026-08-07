@@ -61,7 +61,11 @@ const R_KEYDOWN = sliceBetween(
 // 抽取边界自检：区块必须真的含被测函数
 assert.ok(R_NORMDIR.includes('targetDate'), 'normDir 区块缺少 targetDate 字段（抽取边界漂移？）');
 assert.ok(R_INBOX.includes('__inbox__'), 'GOAL_INBOX 区块抽取异常');
-assert.ok(R_DERIVE.includes('function goalList('), '派生区块缺少 goalList');
+// 看板重构：goalList 已移除（改注释占位），列枚举改由 renderKanban 直接遍历 directions + GOAL_INBOX 虚拟列。
+// 数据层口径（goalStats/addSubTask/deleteGoal 等）完全保留，下面断言新实现与重构红线。
+assert.ok(!/function goalList\(/.test(HTML), 'goalList 应已在看板重构中移除（改注释占位）');
+assert.ok(R_DERIVE.includes('function goalStats(gid){'), '派生区块缺少 goalStats（数据层进度口径被移除？）');
+assert.ok(HTML.includes('kanbanColumnHtml(GOAL_INBOX.id)'), '看板未以 GOAL_INBOX 作为未归类虚拟列');
 assert.ok(R_DERIVE.includes('function addSubTask(gid, title){'), '派生区块缺少 addSubTask');
 assert.ok(R_CRUD.includes('function saveGoal(){'), 'CRUD 区块缺少 saveGoal');
 assert.ok(R_KEYDOWN.includes('isComposing'), 'keydown 区块缺少中文输入法保护');
@@ -197,10 +201,10 @@ describe('A. 静态不变量（虚拟目标 / 三闸门 / CSS 作用域 / 旧标
     assert.equal(hits.length, 1, `__inbox__ 字面量应只出现 1 次（GOAL_INBOX 定义处），实际 ${hits.length} 次`);
   });
 
-  test('A3 goalList 用 concat 追加虚拟目标（不 push 进 directions）', () => {
-    const src = sliceBetween(HTML, 'function goalList(){', 'function goalStats(gid){', 'goalList');
-    assert.match(src, /real\.concat\(\[GOAL_INBOX\]\)/, 'goalList 必须用 concat 追加，不得原地 push');
-    assert.ok(!/directions\.push\(GOAL_INBOX\)/.test(src), 'goalList 内不得出现 directions.push(GOAL_INBOX)');
+  test('A3 看板以 concat 追加未归类虚拟列（不 push 进 directions，口径等价于旧 goalList）', () => {
+    const src = sliceBetween(HTML, 'function renderKanban(){', '/* 仅刷新某一列', 'renderKanban');
+    assert.match(src, /\[kanbanColumnHtml\(GOAL_INBOX\.id\)\]\.concat\(realDirs\.map\(d=>kanbanColumnHtml\(d\.id\)\)\)/, 'renderKanban 必须用 concat 追加未归类列，不得原地 push');
+    assert.ok(!/directions\.push\(GOAL_INBOX\)/.test(src), 'renderKanban 内不得出现 directions.push(GOAL_INBOX)');
   });
 
   test('A4 三闸门：openGoalEdit / saveGoal / deleteGoal 都带 isVirtualGoal 守卫', () => {
@@ -296,59 +300,38 @@ describe('B. normDir：老数据字段补齐且幂等', () => {
 
 /* ══════════════════════════ C. goalList 派生 ══════════════════════════ */
 
-describe('C. goalList：真实目标排序 + 条件虚拟未归类', () => {
+describe('C. 未归类聚合 + 列映射（看板数据层等价断言）', () => {
   function envWith({ dirs, notes }) {
     return makeSandbox({ directions: dirs, notes });
   }
 
-  test('C1 无 dir 为空的任务时不出现 __inbox__', () => {
-    const env = envWith({
-      dirs: [{ id: 'g1', name: 'A', cat: '个人', ord: 0, created: 1 }],
-      notes: [{ id: 'n1', title: 'x', dir: 'g1', deleted: false, status: 'todo' }],
-    });
-    const list = plain(env.api.get('goalList()'));
-    assert.deepEqual(list.map((g) => g.id), ['g1']);
-  });
-
-  test('C2 存在 dir 为空的任务时 __inbox__ 追加到末尾', () => {
-    const env = envWith({
-      dirs: [{ id: 'g1', name: 'A', cat: '个人', ord: 0, created: 1 }],
-      notes: [
-        { id: 'n1', title: 'x', dir: 'g1', deleted: false, status: 'todo' },
-        { id: 'n2', title: 'y', dir: null, deleted: false, status: 'todo' },
-      ],
-    });
-    const list = plain(env.api.get('goalList()'));
-    assert.deepEqual(list.map((g) => g.id), ['g1', '__inbox__']);
-    assert.equal(list[1].virtual, true);
-    // 关键：directions 数组本身仍不含 __inbox__
-    const dirs = plain(env.api.get('directions'));
-    assert.ok(!dirs.some((d) => d.id === '__inbox__'), 'directions 被污染进了虚拟目标 id');
-  });
-
-  test('C3 真实目标按 ord → created 升序；归档/软删排除', () => {
-    const env = envWith({
-      dirs: [
-        { id: 'a', name: 'late', cat: '个人', ord: 9, created: 999 },
-        { id: 'b', name: 'early', cat: '个人', ord: 1, created: 100 },
-        { id: 'c', name: 'mid', cat: '个人', ord: 1, created: 200 },
-        { id: 'd', name: 'archived', cat: '个人', ord: 0, created: 50, archived: true },
-        { id: 'e', name: 'deleted', cat: '个人', ord: 0, created: 60, deleted: true },
-      ],
-      notes: [],
-    });
-    const list = plain(env.api.get('goalList()'));
-    assert.deepEqual(list.map((g) => g.id), ['b', 'c', 'a']);
-  });
-
-  test('C4 调用 goalList 后 directions 永远不含 __inbox__（反复调用也不污染）', () => {
+  test('C1 未归类聚合（等价于旧 goalList 未归类列）：goalStats("__inbox__") 统计 dir=null 与 dir=\'\' 任务，排除真实 dir', () => {
     const env = envWith({
       dirs: [{ id: 'g1', name: 'A', cat: '个人' }],
-      notes: [{ id: 'n1', title: 'y', dir: '', deleted: false, status: 'todo' }], // 空串也算未归类
+      notes: [
+        { id: 'n1', title: 'x', dir: null, deleted: false, status: 'todo' },
+        { id: 'n2', title: 'y', dir: '', deleted: false, status: 'todo' },
+        { id: 'n3', title: 'z', dir: 'g1', deleted: false, status: 'todo' },
+      ],
     });
-    for (let i = 0; i < 3; i++) env.api.get('goalList()');
-    const dirs = plain(env.api.get('directions'));
-    assert.ok(!dirs.some((d) => d.id === '__inbox__'));
+    const inbox = plain(env.api.get('goalStats("__inbox__")'));
+    assert.equal(inbox.total, 2, '未归类应只统计 dir 为空（null/空串）的任务，不含真实目标');
+    assert.equal(inbox.done, 0);
+    const g1 = plain(env.api.get('goalStats("g1")'));
+    assert.equal(g1.total, 1, '真实目标只统计归属自己的子任务');
+  });
+
+  test('C2 列映射语义：renderKanban 用 realDirs(过滤 !deleted&&!archived) + 未归类虚拟列 枚举，N 活跃方向 → N+1 列', () => {
+    const src = sliceBetween(HTML, 'function renderKanban(){', '/* 仅刷新某一列', 'renderKanban');
+    assert.match(src, /realDirs\s*=\s*directions\.filter\(d=>!d\.deleted && !d\.archived\)/, 'renderKanban 须过滤已删/已归档方向');
+    assert.match(src, /\[kanbanColumnHtml\(GOAL_INBOX\.id\)\]\.concat\(realDirs\.map\(d=>kanbanColumnHtml\(d\.id\)\)\)/, 'renderKanban 须先放未归类列再 concat 真实列');
+  });
+
+  test('C3 directions 永不写入 __inbox__（虚拟列只存在于渲染层，绝不写数组）', () => {
+    // 文件中 __inbox__ 字面量仅出现 1 次（GOAL_INBOX 定义），无任何代码把它当真实 id 写进 directions
+    assert.equal((HTML.match(/__inbox__/g) || []).length, 1, '__inbox__ 字面量应只在 GOAL_INBOX 定义处出现 1 次');
+    assert.ok(!/directions\.push\(GOAL_INBOX/.test(HTML), '不得 directions.push(GOAL_INBOX)');
+    assert.ok(!/directions\.map\([^)]*GOAL_INBOX/.test(HTML), '不得把 GOAL_INBOX 映射进 directions');
   });
 });
 
@@ -422,7 +405,7 @@ describe('D. goalStats：x/y + pct 口径', () => {
     const env = makeSandbox({ notes, directions: dirs });
     const beforeNotes = JSON.stringify(plain(env.api.get('notes')));
     const beforeDirs = JSON.stringify(plain(env.api.get('directions')));
-    env.api.get('goalStats("g1")'); env.api.get('goalList()');
+    env.api.get('goalStats("g1")'); env.api.get('goalStats("__inbox__")');
     assert.equal(JSON.stringify(plain(env.api.get('notes'))), beforeNotes);
     assert.equal(JSON.stringify(plain(env.api.get('directions'))), beforeDirs);
   });

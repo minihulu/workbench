@@ -254,6 +254,39 @@
   .chk-lg{margin-left:auto; width:28px; height:28px; border-radius:50%; border:2px solid #bbb; background:transparent; color:#fff; font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:.12s;}
   .chk-lg.on{background:var(--brand); border-color:var(--brand);}
 
+  /* 看板（Kanban）：大任务列 + 子任务卡 */
+  .kanban{ display:flex; gap:14px; overflow-x:auto; padding:4px 2px 12px; align-items:flex-start; }
+  .kanban-col{ flex:0 0 290px; width:290px; background:var(--bg2); border:1px solid var(--line); border-radius:16px; padding:12px; display:flex; flex-direction:column; max-height:calc(100vh - 210px); }
+  .kanban-col-inbox{ border-style:dashed; }
+  .kanban-col-head{ display:flex; align-items:center; gap:8px; }
+  .kanban-col-emoji{ font-size:20px; flex:none; }
+  .kanban-col-title-row{ flex:1; min-width:0; display:flex; }
+  .kanban-col-name{ font-weight:800; font-size:15px; cursor:text; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .kanban-col-name-input{ flex:1; min-width:0; font:inherit; font-weight:800; font-size:15px; border:none; border-bottom:2px solid var(--brand); background:transparent; color:var(--txt); padding:0 0 2px; }
+  .kanban-col-btns{ display:flex; gap:1px; flex:none; }
+  .kanban-col-btns button{ background:none; border:none; cursor:pointer; font-size:14px; line-height:1; padding:3px 5px; border-radius:7px; color:var(--txt2); }
+  .kanban-col-btns button:hover{ color:var(--brand); background:var(--chip); }
+  .kanban-prog{ margin-top:8px; }
+  .kanban-prog-txt{ font-size:11.5px; color:var(--brand); margin-top:5px; font-weight:600; }
+  .kanban-cards{ margin-top:10px; display:flex; flex-direction:column; gap:8px; overflow-y:auto; flex:1; padding-right:2px; }
+  .kanban-card{ position:relative; display:flex; gap:8px; align-items:flex-start; padding:10px 10px 10px 14px; border:1px solid var(--line); border-radius:12px; background:var(--bg); cursor:pointer; transition:border-color .15s; }
+  .kanban-card:hover{ border-color:var(--brand); }
+  .kanban-card.done{ opacity:.55; }
+  .kanban-card.done .kanban-card-title{ text-decoration:line-through; color:var(--txt2); }
+  .kanban-card .prio-bar{ position:absolute; left:0; top:9px; bottom:9px; width:4px; border-radius:4px; }
+  .kanban-card-main{ flex:1; min-width:0; }
+  .kanban-card-title{ font-size:14px; font-weight:600; word-break:break-word; line-height:1.35; }
+  .kanban-card-meta{ display:flex; gap:5px; margin-top:5px; align-items:center; flex-wrap:wrap; }
+  .kanban-chk{ flex:none; width:22px; height:22px; border-radius:50%; border:2px solid #bbb; background:transparent; color:#fff; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; margin-top:1px; }
+  .kanban-chk.on{ background:var(--brand); border-color:var(--brand); }
+  .kanban-star{ flex:none; background:none; border:none; font-size:16px; color:#bbb; cursor:pointer; padding:0 1px; margin-top:1px; }
+  .kanban-star.on{ color:#f1c40f; }
+  .kanban-add{ margin-top:10px; }
+  .kanban-addin{ width:100%; padding:9px 11px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--txt); font:inherit; box-sizing:border-box; }
+  .kanban-addin:focus{ border-color:var(--brand); outline:none; }
+  .kanban-addcol{ flex:0 0 76px; width:76px; align-self:stretch; border:2px dashed var(--line); border-radius:16px; background:transparent; color:var(--txt2); font-size:13px; font-weight:700; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; min-height:140px; }
+  .kanban-addcol:hover{ border-color:var(--brand); color:var(--brand); }
+
   /* 目标（Goal）系列：进度条 / 行内添加 / 子待办行 / 虚拟卡 / 已完成折叠 */
   .goal-card{display:flex; gap:12px; padding:12px; border:1px solid var(--line); border-radius:14px; background:var(--bg2); margin-top:10px; cursor:pointer; transition:border-color .15s;}
   .goal-card:hover{border-color:var(--brand);}
@@ -1033,13 +1066,11 @@
             </div>
 
             <div class="card">
-              <div class="card-h"><h2>🎯 我的目标</h2><button class="btn ghost sm" id="actNewGoal">＋ 新目标</button></div>
-              <div id="actGoals"></div>
-            </div>
-
-            <div class="card">
-              <div class="card-h"><h2>📋 全部任务</h2><button class="btn ghost sm" id="actAllTasks">查看全部</button></div>
-              <div id="actTasks"></div>
+              <div class="card-h">
+                <h2>🗂 看板</h2>
+                <button class="btn ghost sm" id="kanbanAllTasks">📋 全部任务</button>
+              </div>
+              <div class="kanban" id="kanbanBoard"></div>
             </div>
 
             <div class="card">
@@ -1082,7 +1113,7 @@
               <label class="fld" style="margin-top:12px;">备注（可选）</label>
               <textarea id="noteEBody" rows="3" placeholder="关键细节、链接、想法…"></textarea>
 
-              <label class="fld" style="margin-top:12px;">所属目标</label>
+              <label class="fld" style="margin-top:12px;">所属大目标</label>
               <select id="noteEDir" class="sel"></select>
 
               <label class="fld" style="margin-top:12px;">分类</label>
@@ -2439,13 +2470,7 @@ function goalById(gid){
   if(isVirtualGoal(gid)) return GOAL_INBOX;
   return directions.find(d=>!d.deleted && d.id===gid) || null;
 }
-function goalList(){
-  const real = directions.filter(d=>!d.deleted && !d.archived)
-    .sort((a,b)=>(a.ord||0)-(b.ord||0) || (a.created||0)-(b.created||0));
-  const hasInbox = notes.some(n=>!n.deleted && !n.dir);
-  if(hasInbox) return real.concat([GOAL_INBOX]);
-  return real;
-}
+/* goalList 已不再使用：看板直接枚举 directions（真实列）+ GOAL_INBOX（未归类虚拟列） */
 function goalStats(gid){
   const subs = notes.filter(n=>!n.deleted && (isVirtualGoal(gid) ? !n.dir : n.dir===gid));
   const done = subs.filter(n=>n.status==="done").length;
@@ -2505,7 +2530,7 @@ function renderNotes(){ renderActHome(); }
 function renderActHome(){
   const h = new Date().getHours();
   $("#actGreet").textContent = (h<6?"夜深了，": h<11?"早上好，": h<14?"中午好，": h<18?"下午好，": "晚上好，") + "今天也在推进重要的事。";
-  renderActFocus(); renderActGoals(); renderActTasks(); renderActReview();
+  renderActFocus(); renderKanban(); renderActReview();
 }
 function focusTasks(){
   const today=todayStr();
@@ -2532,28 +2557,194 @@ function renderActFocus(){
       ${statusDot(n.status)}
     </div>`).join("");
   $$("#actFocus [data-open-note]").forEach(b=> b.onclick=()=> openNoteEdit(b.dataset.openNote));
-  $$("#actFocus .focus-star").forEach(b=> b.onclick=()=>{ const n=notes.find(x=>x.id===b.dataset.focus); if(!n) return; n.focus=!n.focus; n.updatedAt=Date.now(); saveNotes(); renderActFocus(); $("#focusCount").textContent=focusTasks().length+" 项"; });
+  $$("#actFocus .focus-star").forEach(b=> b.onclick=()=>{ const n=notes.find(x=>x.id===b.dataset.focus); if(!n) return; n.focus=!n.focus; n.updatedAt=Date.now(); saveNotes(); renderActFocus(); $("#focusCount").textContent=focusTasks().length+" 项"; syncBoardStar(n.id); });
 }
-function renderActGoals(){
-  const list=goalList(); const el=$("#actGoals");
-  if(!list.length){ el.innerHTML='<div class="empty">还没有目标，点「＋ 新目标」建立你的第一个大目标。</div>'; return; }
-  el.innerHTML = list.map(g=>{
-    const st=goalStats(g.id);
-    const prog = st.total>0
-      ? `<div class="goal-prog"><i style="width:${st.pct}%"></i></div><div class="goal-prog-txt">${st.done}/${st.total} · ${st.pct}%</div>`
-      : `<div class="goal-q"><span class="dim">还没有子待办，进去加第一条吧</span></div>`;
-    const next = st.nextStep ? `<div class="goal-next">下一步：${esc(st.nextStep.title)}</div>` : "";
-    return `<div class="goal-card ${g.virtual?'virtual':''}" data-open-goal="${g.id}">
-      <div class="goal-emoji">${g.emoji}</div>
-      <div class="goal-body">
-        <div class="goal-name">${esc(g.name)}</div>
-        <div class="goal-q">${g.quarterGoal?esc(g.quarterGoal):(g.virtual?'<span class="dim">没有归属目标的散装待办</span>':'<span class="dim">未设阶段里程碑</span>')}</div>
-        ${prog}
-        ${next}
+/* ---- 看板（Kanban）：首页重组为大任务列 + 子任务卡 ----
+   首列固定「📥 未归类」（虚拟列，不写 directions）；其后是每个真实大任务（direction）一列；
+   列尾「＋ 新列」添加新方向。复用 notes/directions，零新增同步键。 */
+const NOTE_CAT_COLORS = { "医学":"#EF6F6C", "创业":"#8B7CF6", "金融":"#4C9AFF", "个人":"#36C5A8" };
+function noteCatColor(c){ return NOTE_CAT_COLORS[c] || "#94A3B8"; }
+let kanbanTitleEditId = null;   // 正在内联编辑标题的列（direction id），渲染后自动聚焦
+
+/* 单列卡片 HTML（未完成在前、已完成置灰置于末尾） */
+function kanbanCardsHtml(gid){
+  const st = goalStats(gid);
+  if(!st.subs.length) return '<div class="empty sm">还没有子任务，在下方输入框回车添加。</div>';
+  const und = st.subs.filter(n=>n.status!=="done")
+    .sort((a,b)=> (PRIO_RANK[a.prio]??1)-(PRIO_RANK[b.prio]??1) || (a.dueDate||"~").localeCompare(b.dueDate||"~"));
+  const done = st.subs.filter(n=>n.status==="done");
+  return und.concat(done).map(n=>`
+    <div class="kanban-card ${n.status==="done"?"done":""}" data-nid="${n.id}">
+      <span class="prio-bar" style="background:${noteCatColor(n.cat)}" title="${esc(n.cat)}"></span>
+      <button class="kanban-chk ${n.status==="done"?"on":""}" data-nid="${n.id}" title="切换完成">${n.status==="done"?"✓":""}</button>
+      <div class="kanban-card-main">
+        <div class="kanban-card-title">${esc(n.title)}</div>
+        <div class="kanban-card-meta">
+          <span class="prio-chip2 prio-${n.prio}">${PRIO_LABEL[n.prio]}</span>
+          ${n.eta?`<span class="eta-chip">⏱ ${etaLabel(n.eta)}</span>`:""}
+          ${statusDot(n.status)}
+        </div>
       </div>
-    </div>`;
-  }).join("");
-  $$("#actGoals [data-open-goal]").forEach(b=> b.onclick=()=> openGoal(b.dataset.openGoal));
+      <button class="kanban-star ${n.focus?'on':''}" data-nid="${n.id}" title="今日聚焦">${n.focus?'★':'☆'}</button>
+    </div>`).join("");
+}
+/* 单列进度（x/y + 进度条） */
+function kanbanProgHtml(gid){
+  const st = goalStats(gid);
+  if(!st.total) return '<div class="kanban-prog-txt" style="opacity:.5">暂无子任务</div>';
+  return `<div class="goal-prog"><i style="width:${st.pct}%"></i></div><div class="kanban-prog-txt">${st.done}/${st.total} · ${st.pct}%</div>`;
+}
+/* 单列整体 HTML */
+function kanbanColumnHtml(gid){
+  const isInbox = isVirtualGoal(gid);
+  const g = goalById(gid);
+  const editing = kanbanTitleEditId===gid;
+  const titleHtml = editing
+    ? `<input class="kanban-col-name-input" data-gid="${gid}" placeholder="大任务名称" maxlength="40" value="${esc(g?g.name:"")}">`
+    : `<span class="kanban-col-name" data-gid="${gid}" title="${isInbox?'未归类（虚拟列）':'点击重命名'}">${esc(g?g.name:"未命名")}</span>`;
+  const tools = isInbox ? "" :
+    `<div class="kanban-col-btns">
+       <button class="kanban-col-view" data-gid="${gid}" title="查看详情">↗</button>
+       <button class="kanban-col-edit" data-gid="${gid}" title="编辑目标">✏️</button>
+       <button class="kanban-col-del" data-gid="${gid}" title="删除目标">🗑</button>
+     </div>`;
+  return `<div class="kanban-col ${isInbox?'kanban-col-inbox':''}" data-gid="${gid}">
+    <div class="kanban-col-head">
+      <span class="kanban-col-emoji">${g?g.emoji:"📥"}</span>
+      <div class="kanban-col-title-row">${titleHtml}</div>
+      ${tools}
+    </div>
+    <div class="kanban-prog">${kanbanProgHtml(gid)}</div>
+    <div class="kanban-cards" data-gid="${gid}">${kanbanCardsHtml(gid)}</div>
+    <div class="kanban-add">
+      <input class="kanban-addin" data-gid="${gid}" placeholder="添加子任务，回车连续添加" autocomplete="off">
+    </div>
+  </div>`;
+}
+/* 渲染整块看板：首列「📥 未归类」+ 各真实大任务列 + 列尾「＋ 新列」 */
+function renderKanban(){
+  const board = $("#kanbanBoard");
+  if(!board) return;
+  bindKanban();
+  const realDirs = directions.filter(d=>!d.deleted && !d.archived)
+    .sort((a,b)=>(a.ord||0)-(b.ord||0) || (a.created||0)-(b.created||0));
+  const cols = [kanbanColumnHtml(GOAL_INBOX.id)].concat(realDirs.map(d=>kanbanColumnHtml(d.id)));
+  board.innerHTML = cols.join("") + `<button class="kanban-addcol" id="kanbanAddCol" title="新增大任务列">＋<br>新列</button>`;
+  /* 新增大任务后自动进入标题内联编辑 */
+  if(kanbanTitleEditId){
+    const inp = board.querySelector(`.kanban-col-name-input[data-gid="${kanbanTitleEditId}"]`);
+    if(inp){ inp.focus(); inp.select(); }
+    kanbanTitleEditId = null;
+  }
+}
+/* 仅刷新某一列（卡片 + 进度），用于勾选/添加子任务，保留输入框焦点 */
+function refreshKanbanColumn(gid){
+  const col = document.querySelector(`.kanban-col[data-gid="${gid}"]`);
+  if(!col) return;
+  const cards = col.querySelector(".kanban-cards");
+  const prog = col.querySelector(".kanban-prog");
+  if(cards) cards.innerHTML = kanbanCardsHtml(gid);
+  if(prog) prog.innerHTML = kanbanProgHtml(gid);
+}
+/* 进入列标题内联编辑 */
+function enterKanbanTitleEdit(gid){ kanbanTitleEditId = gid; renderKanban(); }
+/* 保存列标题（内联编辑：回车/失焦） */
+function saveKanbanTitle(gid){
+  const col = document.querySelector(`.kanban-col[data-gid="${gid}"]`);
+  const inp = col && col.querySelector(".kanban-col-name-input");
+  const val = inp ? inp.value.trim() : "";
+  const d = directions.find(x=>x.id===gid);
+  if(d){ d.name = val || "未命名目标"; d.updatedAt=Date.now(); saveDirections(); }
+  kanbanTitleEditId = null;
+  renderKanban();
+}
+/* 新增大任务列 */
+function addKanbanColumn(){
+  const id = uid();
+  directions.push(normDir({ id, emoji:"🎯", name:"", cat:"个人", longGoal:"", quarterGoal:"", targetDate:null, created:Date.now(), updatedAt:Date.now(), deleted:false, deviceId, ord:directions.length, archived:false }));
+  saveDirections();
+  kanbanTitleEditId = id;
+  renderKanban();
+}
+/* 删除大任务列：子任务回退「未归类」，方向软删除（与现有 deleteGoal 一致） */
+function deleteKanbanColumn(gid){
+  const d = directions.find(x=>x.id===gid);
+  if(!d || d.deleted) return;
+  if(!confirm("删除「"+d.name+"」后，其下的子任务会保留在『📥 未归类』中。确定删除吗？")) return;
+  notes = notes.map(n=> n.dir===gid ? Object.assign({}, n, { dir:null, updatedAt:Date.now() }) : n);
+  directions = directions.map(x=> x.id===gid ? Object.assign({}, x, { deleted:true, updatedAt:Date.now() }) : x);
+  saveNotes(); saveDirections();
+  renderKanban(); renderActFocus();
+  toast("已删除目标（子任务保留）");
+}
+/* 顶部聚焦条 ↔ 看板卡片 的聚焦星联动：仅更新单卡片星，避免重建整块看板丢失输入框焦点 */
+function syncBoardStar(nid){
+  const bs = document.querySelector(`.kanban-star[data-nid="${nid}"]`);
+  if(!bs) return;
+  const n = notes.find(x=>x.id===nid); if(!n) return;
+  bs.classList.toggle("on", n.focus);
+  bs.textContent = n.focus ? "★" : "☆";
+}
+/* 看板事件委托（一次绑定，内容重建不丢监听）；回车连续添加保留焦点、中文输入法保护 */
+function bindKanban(){
+  const board = $("#kanbanBoard");
+  if(!board || board.dataset.bound) return;
+  board.dataset.bound = "1";
+
+  board.addEventListener("click", e=>{
+    const star = e.target.closest(".kanban-star");
+    if(star){ const n=notes.find(x=>x.id===star.dataset.nid); if(!n) return; n.focus=!n.focus; n.updatedAt=Date.now(); saveNotes(); star.classList.toggle("on",n.focus); star.textContent=n.focus?"★":"☆"; renderActFocus(); return; }
+
+    const chk = e.target.closest(".kanban-chk");
+    if(chk){ const n=notes.find(x=>x.id===chk.dataset.nid); if(!n) return; const to=n.status==="done"?"todo":"done"; n.status=to; n.done=(to==="done"); n.doneAt=(to==="done")?Date.now():null; n.updatedAt=Date.now(); saveNotes(); refreshKanbanColumn(n.dir||GOAL_INBOX.id); renderActFocus(); return; }
+
+    const card = e.target.closest(".kanban-card");
+    if(card){ openNoteEdit(card.dataset.nid); return; }
+
+    const del = e.target.closest(".kanban-col-del");
+    if(del){ deleteKanbanColumn(del.dataset.gid); return; }
+
+    const edit = e.target.closest(".kanban-col-edit");
+    if(edit){ openGoalEdit(edit.dataset.gid); return; }
+
+    const view = e.target.closest(".kanban-col-view");
+    if(view){ openGoal(view.dataset.gid); return; }
+
+    const name = e.target.closest(".kanban-col-name");
+    if(name){ const gid=name.dataset.gid; if(!isVirtualGoal(gid)) enterKanbanTitleEdit(gid); return; }
+
+    const addcol = e.target.closest(".kanban-addcol");
+    if(addcol){ addKanbanColumn(); return; }
+  });
+
+  /* 回车连续添加子任务（仅清空输入框、局部刷新，焦点不丢；中文输入法组合中禁止提交） */
+  board.addEventListener("keydown", e=>{
+    const inp = e.target.closest(".kanban-addin");
+    if(!inp) return;
+    if(e.key!=="Enter") return;
+    if(e.isComposing || e.keyCode===229) return;
+    const gid = inp.dataset.gid;
+    const v = inp.value.trim();
+    if(!v) return;
+    addSubTask(gid, v);
+    inp.value = "";
+    refreshKanbanColumn(gid);
+    inp.focus();
+  });
+
+  /* 列标题内联编辑：回车保存 / Esc 取消 / 失焦保存 */
+  board.addEventListener("keydown", e=>{
+    const inp = e.target.closest(".kanban-col-name-input");
+    if(!inp) return;
+    if(e.key==="Enter"){ e.preventDefault(); saveKanbanTitle(inp.dataset.gid); }
+    else if(e.key==="Escape"){ kanbanTitleEditId=null; renderKanban(); }
+  });
+  board.addEventListener("focusout", e=>{
+    const inp = e.target.closest(".kanban-col-name-input");
+    if(!inp) return;
+    if(kanbanTitleEditId !== inp.dataset.gid) return;   // 已在别处保存/取消，避免二次覆盖
+    saveKanbanTitle(inp.dataset.gid);
+  });
 }
 function openGoal(gid){
   curGoalId = gid;
@@ -2617,18 +2808,7 @@ function bindGoalSubEvents(){
   $$("#goalSubList .focus-star").forEach(b=> b.onclick=e=>{ e.stopPropagation(); const n=notes.find(x=>x.id===b.dataset.focus); if(!n) return; n.focus=!n.focus; n.updatedAt=Date.now(); saveNotes(); renderGoalSubs(curGoalId); });
   const tg = $("#goalDoneToggle"); if(tg) tg.onclick=()=>{ const l=$("#goalDoneList"); if(l) l.style.display = l.style.display==="none" ? "block" : "none"; };
 }
-function renderActTasks(){
-  const list=notes.filter(n=>!n.deleted && n.status!=="done").sort((a,b)=> (PRIO_RANK[a.prio]??1)-(PRIO_RANK[b.prio]??1) || (a.dueDate||"~").localeCompare(b.dueDate||"~")).slice(0,6);
-  const el=$("#actTasks");
-  if(!list.length){ el.innerHTML='<div class="empty">暂无进行中的任务。点 ＋ 开启一件重要的事。</div>'; return; }
-  el.innerHTML = list.map(n=>`
-    <div class="task-row" data-open-note="${n.id}">
-      ${statusDot(n.status)}
-      <div class="task-main"><div class="task-title">${esc(n.title)}</div>
-      <div class="task-meta"><span class="dir-badge sm">${dirBadge(n)}</span><span class="prio-chip2 prio-${n.prio}">${PRIO_LABEL[n.prio]}</span></div></div>
-    </div>`).join("");
-  $$("#actTasks [data-open-note]").forEach(b=> b.onclick=()=> openNoteEdit(b.dataset.openNote));
-}
+/* renderActTasks 已并入看板（renderKanban）：首页不再单列「全部任务」卡片，改由看板列呈现 */
 function renderActReview(){
   const today=todayStr();
   const doneToday=notes.filter(n=>!n.deleted && n.status==="done" && n.doneAt && fmtDate(new Date(n.doneAt))===today);
@@ -2745,7 +2925,7 @@ function saveGoal(){
   const obj={ emoji:($("#dirEmoji").value.trim()||"🎯"), name, cat:$("#dirCat").value, longGoal:$("#dirLong").value.trim(), quarterGoal:$("#dirQuarter").value.trim(), targetDate:$("#goalTargetDate").value||null, updatedAt:Date.now() };
   if(editingGoalId){ const d=directions.find(x=>x.id===editingGoalId); if(!d) return; Object.assign(d,obj); toast("已保存"); }
   else { directions.push(Object.assign({id:uid(),created:Date.now(),deleted:false,deviceId,ord:0,archived:false},obj)); toast("已创建"); }
-  saveDirections(); renderActGoals();
+  saveDirections(); renderActHome();
   if(noteScreen===1 && curGoalId===editingGoalId) renderGoalHead(curGoalId);
   closeModal("#dirModal");
 }
@@ -2810,8 +2990,8 @@ $$("#noteEPrio button").forEach(b=> b.onclick=()=> setNotePrio(b.dataset.prio));
 $$("[data-quickdue]").forEach(b=> b.onclick=()=> quickDue(b.dataset.quickdue));
 $("#noteEStatus").onchange=()=>{ if($("#noteEStatus").value==="done") setNoteDone(true); else setNoteDone(false); };
 $("#noteEDir").onchange=()=>{ const d=directions.find(x=>x.id===$("#noteEDir").value); if(d) $("#noteECat").value=d.cat; };
-$("#actNewGoal").onclick=()=> openGoalEdit(null);
-$("#actAllTasks").onclick=openTaskList;
+/* 新增大任务列改为看板「＋ 新列」按钮（委托在 bindKanban 内处理） */
+$("#kanbanAllTasks").onclick=openTaskList;
 $("#dirSave").onclick=saveGoal;
 $("#dirDelete").onclick=deleteGoal;
 $("#dirCancel").onclick=()=> closeModal("#dirModal");
