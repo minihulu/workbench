@@ -118,6 +118,7 @@ function makeEl(tag) {
 const TOOLBAR_SELECTORS = [
   '#pdfPrev', '#pdfNext', '#pdfTocToggle', '#pdfJump', '#pdfJumpBtn', '#pdfModeBtn',
   '#pdfZoomIn', '#pdfZoomOut', '#pdfZoomVal', '#pdfPageAnno', '#pdfPageInfo', '#pdfToc',
+  '#pdfFullBtn',  // 全屏阅读按钮：bindPdfToolbar 末尾会绑定其 onclick，沙箱须注册，否则 null.onclick 抛错
 ];
 
 /**
@@ -369,7 +370,7 @@ describe('H. renderPdfBook 首屏走滚动布局', () => {
   test('H7 骨架其余部分不受默认值影响（缩放、目录、批注按钮仍在）', () => {
     const html = renderShell(EXPECTED_DEFAULT_MODE);
     for (const id of ['pdfToc', 'pdfTocToggle', 'pdfPrev', 'pdfNext', 'pdfJump', 'pdfJumpBtn',
-      'pdfZoomOut', 'pdfZoomIn', 'pdfZoomVal', 'pdfPageAnno', 'pdfPages']) {
+      'pdfZoomOut', 'pdfZoomIn', 'pdfZoomVal', 'pdfPageAnno', 'pdfPages', 'pdfFullBtn']) {
       assert.match(html, new RegExp(`id="${id}"`), `骨架缺少 #${id}`);
     }
     assert.match(html, />100%</, '缩放初值显示应为 100%');

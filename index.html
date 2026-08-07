@@ -619,6 +619,24 @@
   .pdf-page .annoMarkers{position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:3;}
   .pdf-page .anno-dot{position:absolute; width:15px; height:15px; border-radius:50%; color:#fff; font-size:9px; line-height:15px; text-align:center; pointer-events:auto; cursor:pointer; box-shadow:0 1px 4px rgba(0,0,0,.35);}
   .pdf-page .anno-dot:hover{transform:scale(1.15);}
+  /* 全屏阅读：原生 :fullscreen + CSS 沉浸式兜底（iOS Safari 不支持元素全屏，用 fixed 铺满） */
+  .pdf-reader.immersive{
+    position:fixed; inset:0; z-index:9999; width:100vw; height:100vh; height:100dvh;
+    max-height:none; border-radius:0; margin:0; border:0;
+  }
+  .pdf-reader:fullscreen{
+    width:100vw; height:100vh; max-height:none; border-radius:0; margin:0; border:0;
+  }
+  .pdf-reader.immersive .pdf-toc, .pdf-reader:fullscreen .pdf-toc{ max-height:100vh; max-height:100dvh; }
+  .pdf-reader.immersive .pdf-main, .pdf-reader:fullscreen .pdf-main{ min-height:0; }
+  .pdf-reader.immersive .pdf-pages, .pdf-reader:fullscreen .pdf-pages{
+    max-height:none; height:100%; height:100dvh; flex:1; min-height:0;
+  }
+  /* 全屏下手机端目录仍是浮层抽屉（沿用既有 .show 逻辑） */
+  @media (max-width:760px){
+    .pdf-reader.immersive .pdf-toc, .pdf-reader:fullscreen .pdf-toc{ display:none; }
+    .pdf-reader.immersive .pdf-toc.show, .pdf-reader:fullscreen .pdf-toc.show{ display:flex; }
+  }
   /* 批注气泡（查看/编辑/换色/删除） */
   .anno-pop{position:fixed; z-index:2300; width:min(300px,92vw); background:var(--card); border:1px solid var(--line); border-radius:13px; box-shadow:0 12px 32px rgba(0,0,0,.28); padding:12px 13px; font-size:13px;}
   .anno-pop .ap-quote{font-size:12px; color:var(--txt2); border-left:3px solid var(--line); padding-left:8px; margin-bottom:8px; line-height:1.55; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
@@ -4657,6 +4675,7 @@ async function renderPdfBook(b, source){
     <div class="pdf-main">
       <div class="pdf-toolbar">
         <button id="pdfTocToggle" class="btn sm ghost" title="显示/隐藏目录">📑 目录</button>
+        <button id="pdfFullBtn" class="btn sm ghost" title="全屏 / 退出全屏阅读">⛶ 全屏</button>
         <button id="pdfPrev" class="btn sm ghost">‹ 上一页</button>
         <span class="pdf-pageinfo" id="pdfPageInfo">加载中…</span>
         <button id="pdfNext" class="btn sm ghost">下一页 ›</button>
@@ -4741,6 +4760,86 @@ function bindPdfToolbar(doc, total, pagesEl, b){
   $("#pdfZoomOut").onclick = ()=>{ onPdfZoom(doc,total,pagesEl,b, Math.max(0.5, Math.round((pdfZoom-0.2)*100)/100)); };
   $("#pdfZoomVal").textContent = Math.round(pdfZoom*100)+'%';
   $("#pdfPageAnno").onclick = ()=>{ openAnnoEditor({ type:'idea', bookId:b.id, page:pdfCurrentPage, startOffset:-1, endOffset:-1, pageTextLen:0, selectedText:'' }); };
+  // 全屏阅读（手机/电脑通用：原生 Fullscreen API + iOS Safari 的 CSS 沉浸式兜底）
+  const reader = document.querySelector('.pdf-reader');
+  _pdfFullCtx = { reader, doc, total, pagesEl, b };
+  ensurePdfFullscreenListeners();
+  $("#pdfFullBtn").onclick = ()=> togglePdfFullscreen(reader, doc, total, pagesEl, b);
+}
+
+/* === 全屏阅读：切换 + 状态同步（原生全屏 / CSS 沉浸式兜底通用） === */
+let _pdfFullCtx = null;     // 当前阅读器上下文（供 fullscreenchange 监听复用，避免重复绑定）
+let _pdfFsBound = false;    // fullscreenchange 监听是否已注册（只注册一次）
+
+/**
+ * 同步「⛶ 全屏 / 🔳 退出」按钮文字：
+ * 原生全屏（document.fullscreenElement 指向阅读器）或 CSS 沉浸式兜底（.immersive 类）任一成立即视为「全屏中」。
+ */
+function syncPdfFullBtn(){
+  const btn = $("#pdfFullBtn");
+  if(!btn) return;
+  const reader = document.querySelector('.pdf-reader');
+  const fsEl = document.fullscreenElement || document.webkitFullscreenElement || null;
+  const isFull = (fsEl === reader) || (reader && reader.classList.contains('immersive'));
+  btn.textContent = isFull ? '🔳 退出' : '⛶ 全屏';
+}
+
+/**
+ * 切换全屏阅读。
+ * - 已是原生全屏 → 退出原生全屏。
+ * - 已是 CSS 沉浸式兜底 → 移除 .immersive 退出。
+ * - 否则优先原生 Fullscreen API；若不支持或失败 → 加 .immersive 走 CSS 兜底（iOS Safari 等）。
+ * 进入/退出后都按新容器宽度重排（复用现有 fit-to-width 逻辑）。
+ */
+function togglePdfFullscreen(reader, doc, total, pagesEl, b){
+  // 1) 已在原生全屏 → 退出原生全屏（ESC 也会触发 fullscreenchange，这里覆盖按钮点击退出）
+  const fsEl = document.fullscreenElement || document.webkitFullscreenElement || null;
+  if(fsEl === reader){
+    (document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen)?.call(document);
+    return;
+  }
+  // 2) 已在 CSS 沉浸式兜底（桌面原生失败 / iOS）→ 退出
+  if(reader.classList.contains('immersive')){
+    reader.classList.remove('immersive');
+    syncPdfFullBtn();
+    requestAnimationFrame(()=> pdfRelayout(doc, total, pagesEl, b));
+    return;
+  }
+  // 3) 进入全屏
+  const fn = reader.requestFullscreen || reader.webkitRequestFullscreen || reader.msRequestFullscreen;
+  if(fn){
+    try{
+      const p = fn.call(reader);
+      if(p && typeof p.catch === 'function'){
+        p.catch(()=>{ reader.classList.add('immersive'); syncPdfFullBtn(); requestAnimationFrame(()=> pdfRelayout(doc, total, pagesEl, b)); });
+      }
+    }catch(e){
+      reader.classList.add('immersive'); syncPdfFullBtn(); requestAnimationFrame(()=> pdfRelayout(doc, total, pagesEl, b));
+    }
+  } else {
+    // 检测不到原生 API（典型 iOS Safari，仅 video 支持 requestFullscreen）→ CSS 沉浸式兜底
+    reader.classList.toggle('immersive');
+    syncPdfFullBtn();
+    requestAnimationFrame(()=> pdfRelayout(doc, total, pagesEl, b));
+  }
+}
+
+/**
+ * 注册一次 fullscreenchange 监听：原生全屏进入/退出时同步按钮文字并按新宽度重排。
+ * 用 _pdfFsBound 守卫，避免每次打开 PDF 都重复绑定。
+ */
+function ensurePdfFullscreenListeners(){
+  if(_pdfFsBound) return;
+  _pdfFsBound = true;
+  const onFsChange = ()=>{
+    syncPdfFullBtn();
+    if(_pdfFullCtx){
+      const { doc, total, pagesEl, b } = _pdfFullCtx;
+      requestAnimationFrame(()=> pdfRelayout(doc, total, pagesEl, b));
+    }
+  };
+  document.addEventListener('fullscreenchange', onFsChange);
+  document.addEventListener('webkitfullscreenchange', onFsChange);
 }
 
 /* === 自适应：阅读容器可用宽度 → fit-to-width 基准 scale === */

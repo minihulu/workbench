@@ -294,6 +294,7 @@ function setVisiblePage(divs, total, page) {
 const TOOLBAR_SELECTORS = [
   '#pdfPrev', '#pdfNext', '#pdfTocToggle', '#pdfJump', '#pdfJumpBtn', '#pdfModeBtn',
   '#pdfZoomIn', '#pdfZoomOut', '#pdfZoomVal', '#pdfPageAnno', '#pdfPageInfo', '#pdfToc',
+  '#pdfFullBtn',  // 全屏阅读按钮：bindPdfToolbar 末尾绑定其 onclick，沙箱须注册，否则 null.onclick 抛错
 ];
 
 /* ══════════════════════ A 静态不变量 ══════════════════════ */
