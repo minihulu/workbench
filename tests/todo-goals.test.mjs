@@ -65,7 +65,13 @@ assert.ok(R_INBOX.includes('__inbox__'), 'GOAL_INBOX 区块抽取异常');
 // 数据层口径（goalStats/addSubTask/deleteGoal 等）完全保留，下面断言新实现与重构红线。
 assert.ok(!/function goalList\(/.test(HTML), 'goalList 应已在看板重构中移除（改注释占位）');
 assert.ok(R_DERIVE.includes('function goalStats(gid){'), '派生区块缺少 goalStats（数据层进度口径被移除？）');
-assert.ok(HTML.includes('kanbanColumnHtml(GOAL_INBOX.id)'), '看板未以 GOAL_INBOX 作为未归类虚拟列');
+// 矩阵式重设计：看板已退役，未归类仍是虚拟方向（GOAL_INBOX），由 renderMatrix 首行呈现。
+assert.ok(!/function renderKanban\(/.test(HTML), '旧看板 renderKanban 应已彻底移除（被矩阵取代）');
+assert.ok(!/kanbanColumnHtml/.test(HTML), '旧看板 kanbanColumnHtml 应已彻底移除');
+assert.ok(HTML.includes('function renderMatrix()'), '矩阵 renderMatrix 应已落地');
+assert.ok(HTML.includes('function matrixRowHtml'), 'matrixRowHtml 应存在');
+assert.ok(HTML.includes('function getCompletionMap'), '完成聚合 getCompletionMap 应存在（完成记录嵌 notes）');
+assert.ok(HTML.includes('📥 未归类'), '未归类文案仍在（口径等价于旧未归类列）');
 assert.ok(R_DERIVE.includes('function addSubTask(gid, title){'), '派生区块缺少 addSubTask');
 assert.ok(R_CRUD.includes('function saveGoal(){'), 'CRUD 区块缺少 saveGoal');
 assert.ok(R_KEYDOWN.includes('isComposing'), 'keydown 区块缺少中文输入法保护');
@@ -201,10 +207,11 @@ describe('A. 静态不变量（虚拟目标 / 三闸门 / CSS 作用域 / 旧标
     assert.equal(hits.length, 1, `__inbox__ 字面量应只出现 1 次（GOAL_INBOX 定义处），实际 ${hits.length} 次`);
   });
 
-  test('A3 看板以 concat 追加未归类虚拟列（不 push 进 directions，口径等价于旧 goalList）', () => {
-    const src = sliceBetween(HTML, 'function renderKanban(){', '/* 仅刷新某一列', 'renderKanban');
-    assert.match(src, /\[kanbanColumnHtml\(GOAL_INBOX\.id\)\]\.concat\(realDirs\.map\(d=>kanbanColumnHtml\(d\.id\)\)\)/, 'renderKanban 必须用 concat 追加未归类列，不得原地 push');
-    assert.ok(!/directions\.push\(GOAL_INBOX\)/.test(src), 'renderKanban 内不得出现 directions.push(GOAL_INBOX)');
+  test('A3 矩阵以 concat 追加未归类虚拟行（不 push 进 directions，口径等价于旧看板未归类列）', () => {
+    const src = sliceBetween(HTML, 'function renderMatrix(){', 'function bindMatrix(){', 'renderMatrix');
+    assert.match(src, /realDirs\s*=\s*directions\.filter\(d=>!d\.deleted && !d\.archived\)/, 'renderMatrix 须过滤已删/已归档方向');
+    assert.match(src, /\[matrixRowHtml\(GOAL_INBOX, getDirNotes\(GOAL_INBOX\.id\)\)\]\s*\.concat\(realDirs\.map\(d=>\s*matrixRowHtml\(d, getDirNotes\(d\.id\)\)\)\)/, 'renderMatrix 须先放未归类行再 concat 真实方向行');
+    assert.ok(!/directions\.push\(GOAL_INBOX\)/.test(src), 'renderMatrix 内不得出现 directions.push(GOAL_INBOX)');
   });
 
   test('A4 三闸门：openGoalEdit / saveGoal / deleteGoal 都带 isVirtualGoal 守卫', () => {
@@ -321,10 +328,10 @@ describe('C. 未归类聚合 + 列映射（看板数据层等价断言）', () =
     assert.equal(g1.total, 1, '真实目标只统计归属自己的子任务');
   });
 
-  test('C2 列映射语义：renderKanban 用 realDirs(过滤 !deleted&&!archived) + 未归类虚拟列 枚举，N 活跃方向 → N+1 列', () => {
-    const src = sliceBetween(HTML, 'function renderKanban(){', '/* 仅刷新某一列', 'renderKanban');
-    assert.match(src, /realDirs\s*=\s*directions\.filter\(d=>!d\.deleted && !d\.archived\)/, 'renderKanban 须过滤已删/已归档方向');
-    assert.match(src, /\[kanbanColumnHtml\(GOAL_INBOX\.id\)\]\.concat\(realDirs\.map\(d=>kanbanColumnHtml\(d\.id\)\)\)/, 'renderKanban 须先放未归类列再 concat 真实列');
+  test('C2 矩阵行映射语义：renderMatrix 用 realDirs(过滤 !deleted&&!archived) + 未归类虚拟行 枚举，N 活跃方向 → N+1 行', () => {
+    const src = sliceBetween(HTML, 'function renderMatrix(){', 'function bindMatrix(){', 'renderMatrix');
+    assert.match(src, /realDirs\s*=\s*directions\.filter\(d=>!d\.deleted && !d\.archived\)/, 'renderMatrix 须过滤已删/已归档方向');
+    assert.match(src, /\[matrixRowHtml\(GOAL_INBOX, getDirNotes\(GOAL_INBOX\.id\)\)\]\s*\.concat\(realDirs\.map\(d=>\s*matrixRowHtml\(d, getDirNotes\(d\.id\)\)\)\)/, 'renderMatrix 须先放未归类行再 concat 真实方向行');
   });
 
   test('C3 directions 永不写入 __inbox__（虚拟列只存在于渲染层，绝不写数组）', () => {
