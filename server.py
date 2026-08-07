@@ -148,7 +148,7 @@ _oauth_lock = threading.Lock()
 BACKUP_KEEP = int(os.environ.get("BACKUP_KEEP", "7"))
 TOKEN_TTL = 60 * 60 * 24 * 30          # Token 有效期 30 天
 PBKDF2_ITERS = 200_000
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 
 # ----- Supabase 混合存储引导 -----
 # 默认：若环境变量里给了 SUPABASE_URL + SERVICE_ROLE_KEY 则启用 Supabase；否则回退本地 SQLite。
@@ -158,6 +158,22 @@ SUPABASE_SVC = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
 STORAGE_BACKEND = os.environ.get("STORAGE_BACKEND",
     "supabase" if (SUPABASE_URL and SUPABASE_SVC) else "sqlite").strip().lower()
 STORE = None   # supabase_store 模块（STORAGE_BACKEND=supabase 且初始化成功时设置）
+
+# ----- 语义重排 LLM（可选；留空即关闭，搜索自动降级为关键词模式；零第三方依赖） -----
+# 前端可经 X-LLM-Token 自带 Key（BYOK）；未配则前端不发重排请求，P0 关键词搜索不受影响。
+LLM_API_KEY   = os.environ.get("LLM_API_KEY", "").strip()
+LLM_BASE_URL  = os.environ.get("LLM_BASE_URL", "https://api.deepseek.com/v1").strip().rstrip("/")
+LLM_MODEL     = os.environ.get("LLM_MODEL", "deepseek-chat").strip()
+LLM_TIMEOUT   = float(os.environ.get("LLM_TIMEOUT", "10") or 10)   # 前端 8s，务必让服务端 >= 前端
+LLM_PROXY     = os.environ.get("LLM_PROXY", "").strip()
+# SSRF 白名单：X-LLM-Base 仅当命中白名单才生效，否则忽略（绝不直接把请求头当 URL 用）
+LLM_ALLOWED_BASES = [b.strip().rstrip("/") for b in os.environ.get(
+    "LLM_ALLOWED_BASES",
+    "https://api.deepseek.com/v1,"
+    "https://api.openai.com/v1,"
+    "https://dashscope.aliyuncs.com/compatible-mode/v1,"
+    "https://api.moonshot.cn/v1,"
+    "https://api.siliconflow.cn/v1").split(",") if b.strip()]
 
 db_lock = threading.Lock()
 subscribers = {}                       # uid -> [queue.Queue, ...]  （SSE 订阅者）
@@ -267,6 +283,12 @@ def build_gh_opener():
 
 GH_OPENER = build_gh_opener()
 
+# LLM 独立 opener：不复用 GH_OPENER（GitHub 走代理、DeepSeek 国内直连；混用会把国内端点也塞进代理导致超时）
+# LLM_PROXY 显式配置才走代理，否则 ProxyHandler({}) 强制直连（不继承系统/环境代理）
+LLM_OPENER = urllib.request.build_opener(
+    urllib.request.ProxyHandler({"http": LLM_PROXY, "https": LLM_PROXY} if LLM_PROXY else {})
+)
+
 
 # ----------------------------- 限流 -----------------------------
 class RateLimiter:
@@ -292,6 +314,8 @@ class RateLimiter:
 
 auth_limiter = RateLimiter(30, 600)        # 每个 IP：10 分钟内最多 30 次注册/登录尝试
 github_limiter = RateLimiter(90, 60)       # 每个 IP：每分钟最多 90 次 GitHub 搜索
+rerank_limiter = RateLimiter(10, 60)       # 每 IP 10 次/分钟；LLM 有真实成本，不共用 github_limiter
+_MODEL_RE = re.compile(r"^[A-Za-z0-9._:/-]{1,64}$")
 
 
 # ----------------------------- 数据库 -----------------------------
@@ -440,6 +464,29 @@ def backup_loop():
     while True:
         time.sleep(BACKUP_INTERVAL)
         do_backup()
+
+
+# ----------------------------- LLM 语义重排（urllib 手写，零第三方包） -----------------------------
+def llm_chat(base, key, model, messages, timeout):
+    """OpenAI 兼容 Chat Completions，标准库实现。返回 content 字符串，异常向上抛。"""
+    payload = json.dumps({"model": model, "messages": messages,
+                          "temperature": 0, "max_tokens": 1500, "stream": False},
+                         ensure_ascii=False).encode("utf-8")
+    req = urllib.request.Request(base + "/chat/completions", data=payload, method="POST")
+    req.add_header("Content-Type", "application/json")
+    req.add_header("Authorization", "Bearer " + key)
+    req.add_header("User-Agent", "workbench")
+    with LLM_OPENER.open(req, timeout=timeout) as r:
+        j = json.loads(r.read().decode("utf-8", "replace"))
+    return (j.get("choices") or [{}])[0].get("message", {}).get("content", "") or ""
+
+
+def extract_json_array(text):
+    """LLM 常带 ```json 代码块 / 前后废话：截首个 [ 到末个 ] 再 loads。"""
+    i, k = text.find("["), text.rfind("]")
+    if i < 0 or k <= i:
+        raise ValueError("no json array")
+    return json.loads(text[i:k + 1])
 
 
 # ----------------------------- HTTP 处理器 -----------------------------
@@ -598,9 +645,105 @@ class Handler(BaseHTTPRequestHandler):
             "register_require_invite": REGISTER_REQUIRE_INVITE,
             "github_proxy": bool(GH_TOKEN or GH_PROXY_DICT),
             "github_proxy_detail": (GH_PROXY_DICT or ("GH_TOKEN" if GH_TOKEN else None)),
+            "llm_rerank": bool(LLM_API_KEY),   # 服务端是否已配 key（默认 False）
+            "llm_rerank_byok": True,           # 是否接受前端自带 key（X-LLM-Token）
+            "llm_model": LLM_MODEL if LLM_API_KEY else "",
             "qq_login": bool(QQ_APP_ID and QQ_APP_SECRET),
             "wechat_login": bool(WECHAT_APP_ID and WECHAT_APP_SECRET),
         })
+
+    def _sanitize_candidates(self, lst):
+        """候选净化：只保留元数据字段；desc≤200 / topics≤6 / N≤25；绝不传 README 正文。"""
+        out = []
+        for it in (lst or [])[:25]:
+            if not isinstance(it, dict):
+                continue
+            fn = it.get("full_name")
+            if not isinstance(fn, str) or not fn or len(fn) > 120:
+                continue
+            desc = str(it.get("description") or "")[:200]
+            topics = [str(t) for t in (it.get("topics") or []) if isinstance(t, str)][:6]
+            cand = {"full_name": fn, "description": desc, "topics": topics}
+            if isinstance(it.get("language"), str) and it["language"]:
+                cand["language"] = it["language"]
+            if isinstance(it.get("stars"), (int, float)):
+                cand["stars"] = int(it["stars"])
+            if isinstance(it.get("pushed_at"), str) and it["pushed_at"]:
+                cand["pushed_at"] = it["pushed_at"][:10]
+            out.append(cand)
+        return out
+
+    def api_search_rerank(self, body):
+        """LLM 语义重排：任何路径都返回 200；失败一律 {ok:false, fallback:true}（前端静默降级）。"""
+        ok, retry = rerank_limiter.allow("llm:" + client_ip(self))
+        if not ok:
+            return self._send_json(200, {"ok": False, "fallback": True, "reason": "rate_limited",
+                                         "retry": retry})
+        query = (body.get("query") or "").strip()
+        cands_in = body.get("candidates")
+        if not query or not isinstance(cands_in, list) or not cands_in:
+            return self._send_json(200, {"ok": False, "fallback": True, "reason": "bad_request"})
+        # key 来源：X-LLM-Token（前端 BYOK）> 服务端 LLM_API_KEY
+        key = (self.headers.get("X-LLM-Token") or "").strip() or LLM_API_KEY
+        if not key:
+            return self._send_json(200, {"ok": False, "fallback": True, "reason": "llm_not_configured"})
+        # base 白名单（防 SSRF）：X-LLM-Base 仅当命中白名单才生效，否则忽略
+        base = LLM_BASE_URL
+        want = (self.headers.get("X-LLM-Base") or "").strip().rstrip("/")
+        if want and want in LLM_ALLOWED_BASES:
+            base = want
+        # model 正则消毒
+        model = LLM_MODEL
+        want_m = (self.headers.get("X-LLM-Model") or "").strip()
+        if want_m and _MODEL_RE.match(want_m):
+            model = want_m
+        cands = self._sanitize_candidates(cands_in)
+        if not cands:
+            return self._send_json(200, {"ok": False, "fallback": True, "reason": "bad_request"})
+        t0 = time.time()
+        system = ("你是开源仓库检索的相关性评审。只依据给出的候选元数据判断「仓库的实际功能是否满足用户需求」。"
+                  "严禁推荐候选清单之外的任何仓库；严禁编造仓库名。")
+        user = ("用户需求：%s\n\n候选仓库（JSON 数组）：\n%s\n\n"
+                "请为每个候选打相关度分（0-100，仅看功能是否满足需求，不看 star 多少），"
+                "并给一句不超过 40 个汉字的中文理由，说明它为什么（不）匹配。"
+                "按 score 从高到低输出 JSON 数组，元素形如 "
+                "{\"full_name\":\"...\",\"score\":88,\"reason\":\"...\"}。"
+                "只输出 JSON 数组本身，不要代码块、不要任何解释。"
+                % (query[:500], json.dumps(cands, ensure_ascii=False)))
+        try:
+            content = llm_chat(base, key, model,
+                               [{"role": "system", "content": system},
+                                {"role": "user", "content": user}],
+                               timeout=LLM_TIMEOUT)
+        except urllib.error.HTTPError as e:
+            return self._send_json(200, {"ok": False, "fallback": True,
+                                         "reason": "upstream_error", "detail": "http_%d" % e.code})
+        except Exception as e:
+            reason = "timeout" if isinstance(e, TimeoutError) else "upstream_error"
+            return self._send_json(200, {"ok": False, "fallback": True, "reason": reason})
+        try:
+            arr = extract_json_array(content)
+        except Exception:
+            return self._send_json(200, {"ok": False, "fallback": True, "reason": "parse_failed"})
+        # 三重净化：① full_name 必须在候选集（幻觉仓库丢弃）② score clamp 0-100 ③ reason 截断 40 字
+        allowed = {c["full_name"] for c in cands}
+        out = []
+        for it in arr:
+            fn = (it or {}).get("full_name")
+            if not fn or fn not in allowed:
+                continue
+            try:
+                sc = int(float(it.get("score", 0)))
+            except Exception:
+                sc = 0
+            sc = max(0, min(100, sc))
+            rs = str(it.get("reason") or "")[:40]
+            out.append({"full_name": fn, "score": sc, "reason": rs})
+        if not out:
+            return self._send_json(200, {"ok": False, "fallback": True, "reason": "parse_failed"})
+        out.sort(key=lambda x: x["score"], reverse=True)
+        return self._send_json(200, {"ok": True, "fallback": False, "model": model,
+                                     "ms": int((time.time() - t0) * 1000), "ranked": out})
 
     def api_signup(self, body):
         if not REGISTER_OPEN:
@@ -1080,14 +1223,22 @@ class Handler(BaseHTTPRequestHandler):
             if not ok:
                 return self._send_json(429, {"error": "GitHub 搜索过于频繁，请 %d 秒后再试" % retry})
             q = parse_qs(u.query)
-            params = {
-                "q": (q.get("q") or [""])[0],
-                "sort": (q.get("sort") or ["stars"])[0],
-                "order": (q.get("order") or ["desc"])[0],
-                "per_page": (q.get("per_page") or ["30"])[0],
-            }
-            if not params["q"]:
+            qv = (q.get("q") or [""])[0]
+            if not qv:
                 return self._send_json(400, {"error": "缺少 q 参数"})
+            params = {"q": qv}
+            # per_page：默认 30，放宽到 GitHub 硬上限 100（多路召回用 50）
+            try:
+                pp = int((q.get("per_page") or ["30"])[0])
+            except ValueError:
+                pp = 30
+            params["per_page"] = str(max(1, min(100, pp)))
+            # sort：不传 / 传空 / 非法值 => 不拼 sort 参数，交给 GitHub best-match 相关度排序
+            sort = (q.get("sort") or [""])[0].strip().lower()
+            if sort in ("stars", "forks", "help-wanted-issues", "updated"):
+                params["sort"] = sort
+                order = (q.get("order") or ["desc"])[0].strip().lower()
+                params["order"] = order if order in ("asc", "desc") else "desc"
             return self.github_search(params, dict(self.headers))
         # ----- OAuth 第三方登录 -----
         if p == "/api/auth/qq/login":
@@ -1146,6 +1297,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send_json(403, {"error": "无管理权限或未启用"})
             do_backup()
             return self._send_json(200, {"ok": True})
+        if p == "/api/search/rerank":
+            return self.api_search_rerank(body)
         return self._send_json(404, {"error": "not found"})
 
 

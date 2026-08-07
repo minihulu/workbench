@@ -195,6 +195,13 @@
   .fab{position:fixed; right:22px; bottom:22px; width:56px; height:56px; border-radius:50%; border:none; background:linear-gradient(135deg,var(--brand),var(--brand2)); color:#fff; font-size:30px; line-height:1; box-shadow:0 8px 22px rgba(79,70,229,.4); cursor:pointer; z-index:30;}
   .page:not(.active) .fab{display:none;}
   .dj-stack.show-edit .fab{display:none;}
+  /* 行动系统：三屏（仅作用于 #noteStack，日记 #djStack 不受影响）
+     屏0=目标总览 屏1=目标详情(show-goal) 屏2=子待办编辑(show-edit，沿用既有类名) */
+  #noteStack .dj-track{ width:300%; }
+  #noteStack .dj-screen{ width:33.3333%; flex:0 0 33.3333%; }
+  #noteStack.show-goal .dj-track{ transform:translateX(-33.3333%); }
+  #noteStack.show-edit .dj-track{ transform:translateX(-66.6667%); }
+  #noteStack.show-goal .fab{ display:none; }
 
   /* 行动系统 */
   .act-hero{margin-bottom:2px;}
@@ -247,6 +254,33 @@
   .chk-lg{margin-left:auto; width:28px; height:28px; border-radius:50%; border:2px solid #bbb; background:transparent; color:#fff; font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:.12s;}
   .chk-lg.on{background:var(--brand); border-color:var(--brand);}
 
+  /* 目标（Goal）系列：进度条 / 行内添加 / 子待办行 / 虚拟卡 / 已完成折叠 */
+  .goal-card{display:flex; gap:12px; padding:12px; border:1px solid var(--line); border-radius:14px; background:var(--bg2); margin-top:10px; cursor:pointer; transition:border-color .15s;}
+  .goal-card:hover{border-color:var(--brand);}
+  .goal-card.virtual{border-style:dashed; border-color:var(--txt2); opacity:.94; background:linear-gradient(180deg,var(--bg2),var(--chip));}
+  .goal-emoji{font-size:24px; flex:none; width:44px; height:44px; display:flex; align-items:center; justify-content:center; background:var(--chip); border-radius:12px;}
+  .goal-body{flex:1; min-width:0;}
+  .goal-name{font-weight:800; font-size:15px;}
+  .goal-q{font-size:12.5px; color:var(--txt2); margin-top:3px;}
+  .goal-q .dim{opacity:.6;}
+  .goal-prog{height:4px; background:var(--line); border-radius:999px; overflow:hidden; margin-top:8px;}
+  .goal-prog > i{display:block; height:100%; border-radius:999px; background:linear-gradient(90deg,var(--brand),var(--brand2)); transition:width .35s ease;}
+  .goal-prog-lg{height:8px;}
+  .goal-prog-txt{font-size:11.5px; color:var(--brand); margin-top:5px; font-weight:600;}
+  .goal-next{font-size:12px; color:var(--txt2); margin-top:5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .goal-add{display:flex; gap:8px; align-items:center; padding:2px 0 10px;}
+  .goal-add input{flex:1;}
+  .goal-add-plus{flex:none; color:var(--brand); font-weight:800; font-size:18px;}
+  .sub-row{display:flex; gap:10px; align-items:center; padding:10px 12px; border:1px solid var(--line); border-radius:12px; background:var(--bg2); margin-top:8px; cursor:pointer; transition:border-color .15s;}
+  .sub-row:hover{border-color:var(--brand);}
+  .sub-row.done{opacity:.55;}
+  .sub-row.done .task-title{text-decoration:line-through; color:var(--txt2);}
+  .sub-chk{flex:none; width:22px; height:22px; border-radius:50%; border:2px solid #bbb; background:transparent; color:#fff; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:.12s; padding:0;}
+  .sub-chk.on{background:var(--brand); border-color:var(--brand);}
+  .sub-row.enter{animation:fade .25s ease;}
+  .goal-done-toggle{width:100%; text-align:left; background:var(--bg2); border:1px solid var(--line); border-radius:12px; padding:11px 14px; font-weight:700; cursor:pointer; color:var(--txt); margin-top:12px;}
+  .goal-guide{font-size:12.5px; color:var(--txt2); background:var(--chip); border-radius:10px; padding:9px 12px; margin-top:8px; line-height:1.6;}
+
   /* github cards */
   .repo{display:block; padding:15px; border:1px solid var(--line); border-radius:13px; background:var(--bg2); margin-bottom:12px; text-decoration:none; color:inherit; transition:.15s;}
   .repo:hover{border-color:var(--brand); transform:translateY(-2px); box-shadow:var(--shadow);}
@@ -254,6 +288,22 @@
   .repo .desc{font-size:14px; color:var(--txt2); margin:6px 0 9px;}
   .repo .meta{display:flex; gap:16px; font-size:13px; color:var(--txt2); flex-wrap:wrap;}
   .repo .meta b{color:var(--txt);}
+  .repo-head{display:flex; align-items:flex-start; justify-content:space-between; gap:8px;}
+  .match-badges{display:flex; gap:6px; flex-wrap:wrap; flex:none;}
+  .match-badge{font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; white-space:nowrap; background:var(--chip); color:var(--txt2);}
+  .match-badge.mb-sem-hi{background:rgba(16,185,129,.14); color:#10B981;}
+  .match-badge.mb-sem-mid{background:rgba(59,130,246,.12); color:#3B82F6;}
+  .match-badge.mb-sem-low{background:rgba(148,163,184,.16); color:#94A3B8;}
+  .match-reason{font-size:12.5px; color:var(--txt); background:var(--chip); border-radius:9px; padding:7px 10px; margin:8px 0 2px; line-height:1.5;}
+  .gh-intent{font-size:13px; color:var(--txt2); background:var(--chip); border-radius:12px; padding:10px 12px; margin-top:12px; line-height:1.7;}
+  .gh-intent .gi-h{font-weight:800; color:var(--txt); margin-bottom:4px;}
+  .intent-chip{display:inline-flex; align-items:center; gap:4px; background:var(--bg2); border:1px solid var(--line); border-radius:999px; padding:2px 9px; font-size:12px; font-weight:600; color:var(--txt); margin:2px 4px 2px 0; cursor:pointer;}
+  .intent-chip:hover{border-color:var(--danger); color:var(--danger);}
+  .intent-chip .ic-x{opacity:.6;}
+  .gh-degrade{font-size:12.5px; color:var(--txt2); background:var(--chip); border-radius:9px; padding:8px 12px; margin:0 0 10px; display:flex; align-items:center; gap:8px;}
+  .gh-degrade .gd-x{margin-left:auto; cursor:pointer; background:none; border:none; color:var(--txt2); font-size:14px;}
+  .gh-rerank-bar{height:3px; border-radius:999px; background:linear-gradient(90deg,var(--brand),var(--brand2)); margin:0 0 10px; display:none; animation:pulse 1.2s infinite;}
+  .fade-in{animation:fade .3s ease;}
 
   /* idea cards */
   .idea{padding:15px; border:1px solid var(--line); border-radius:13px; background:var(--bg2); margin-bottom:12px;}
@@ -914,22 +964,23 @@
     <!-- GITHUB PAGE -->
     <section class="page" id="page-github">
       <h1 class="title">GitHub 探索</h1>
-      <p class="sub">输入你的「意图」，我帮你拆成关键词去 GitHub 搜相关开源仓库。</p>
+      <p class="sub">说出你想要的功能，我帮你找到功能真正匹配的仓库。</p>
 
       <div class="card">
-        <h2>🔍 说出你的意图</h2>
+        <h2>🔍 描述你的需求</h2>
         <div class="search-box">
-          <input id="ghInput" placeholder="例如：我想找个能绕过手机验证码登录的仓库">
+          <input id="ghInput" placeholder="能管理每日待办、支持标签和提醒的小工具">
           <button class="btn" id="ghSearch">按意图搜索</button>
         </div>
         <div id="ghExamples" class="idea-cats" style="margin-top:12px;">
           <span style="font-size:12px;color:var(--txt2);align-self:center;">意图示例：</span>
-          <button type="button" class="cat-chip" data-intent="我想找个能绕过手机验证码登录的仓库">绕过手机验证</button>
-          <button type="button" class="cat-chip" data-intent="自动整理手机照片的网站">自动整理照片</button>
-          <button type="button" class="cat-chip" data-intent="好用的记账本">记账本</button>
-          <button type="button" class="cat-chip" data-intent="番茄钟">番茄钟</button>
+          <button type="button" class="cat-chip" data-intent="管理每日待办的小工具">管理每日待办的小工具</button>
+          <button type="button" class="cat-chip" data-intent="把网页存成 Markdown 的剪藏工具">把网页存成 Markdown</button>
+          <button type="button" class="cat-chip" data-intent="本地跑的 AI 聊天界面">本地跑的 AI 聊天界面</button>
+          <button type="button" class="cat-chip" data-intent="自动整理照片的相册管理工具">自动整理照片</button>
         </div>
-        <div class="hint">描述越像「我想做/找 XX」越好；我会抽取英文词作锚点，再把中文意图映射成同义词去搜。下方「检索词」会显示我理解的意图。<b>匿名搜索 GitHub 仅 10 次/分钟</b>，点多几次会被限流，建议展开下方填写 Token。</div>
+        <div id="ghIntent" class="gh-intent" style="display:none;"></div>
+        <div class="hint">我会把中文需求翻译成关键词，去搜仓库名 + 描述 + README，并按<b>功能相关度</b>排序（不再只按 Star）。下方「我理解到的需求」可随时删词重搜。<b>匿名搜索 GitHub 仅 10 次/分钟</b>，填 Token 可提升到 5000 次/小时。</div>
         <details class="gh-adv" style="margin-top:12px;">
           <summary style="cursor:pointer;font-size:13px;color:var(--txt2);">⚙️ GitHub Token（可选 · 限额提升到 5000 次/小时）</summary>
           <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
@@ -938,6 +989,15 @@
             <button class="btn ghost" id="ghClearToken" type="button">清除</button>
           </div>
           <div class="hint" style="margin-top:6px;">Token 仅保存在本机浏览器（localStorage），不会上传任何服务器。匿名搜索仅 10 次/分钟易触发限制；填 Token 后提升到 5000 次/小时。</div>
+        </details>
+        <details class="gh-adv" style="margin-top:12px;">
+          <summary style="cursor:pointer;font-size:13px;color:var(--txt2);">🧠 语义重排 Key（可选 · 开启「为什么匹配」）</summary>
+          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+            <input id="llmToken" type="password" placeholder="粘贴 LLM API Key（OpenAI 兼容，如 DeepSeek）" style="flex:1;min-width:220px;">
+            <button class="btn" id="llmSaveToken" type="button">保存</button>
+            <button class="btn ghost" id="llmClearToken" type="button">清除</button>
+          </div>
+          <div class="hint" style="margin-top:6px;">Key 仅保存在本机浏览器（localStorage）。搜索时经 server.py 转发给你指定的 LLM 端点做语义重排；不填也不影响关键词搜索（自动降级为关键词模式）。服务器也可配 LLM_API_KEY 兜底。</div>
         </details>
         <div style="margin-top:10px;">
           <button class="btn ghost" id="ghDiag" type="button" style="font-size:12px;">🩺 连接自检</button>
@@ -949,6 +1009,8 @@
       <div class="card" id="ghResultCard" style="display:none;">
         <h2>📦 搜索结果 <span id="ghCount" class="pill"></span></h2>
         <div id="ghQuery" class="hint" style="margin:0 0 12px;display:none;"></div>
+        <div id="ghDegrade" class="gh-degrade" style="display:none;"></div>
+        <div id="ghRerankBar" class="gh-rerank-bar"></div>
         <div id="ghList"></div>
       </div>
     </section>
@@ -971,8 +1033,8 @@
             </div>
 
             <div class="card">
-              <div class="card-h"><h2>🧭 人生方向</h2><button class="btn ghost sm" id="actNewDir">＋ 新方向</button></div>
-              <div id="actDirs"></div>
+              <div class="card-h"><h2>🎯 我的目标</h2><button class="btn ghost sm" id="actNewGoal">＋ 新目标</button></div>
+              <div id="actGoals"></div>
             </div>
 
             <div class="card">
@@ -986,6 +1048,24 @@
             </div>
 
             <button class="fab" id="noteFab" title="新建任务">＋</button>
+          </div>
+
+          <!-- 屏幕 A2：目标详情（屏1） -->
+          <div class="dj-screen" id="goalDetailScreen">
+            <div class="dj-topbar">
+              <button class="btn ghost sm" id="goalBack">‹ 返回</button>
+              <span class="dj-topdate" id="goalDetailName">目标详情</span>
+              <button class="icon-btn" id="goalEditBtn" title="编辑目标" style="margin-left:auto">✏️</button>
+            </div>
+            <div class="card" id="goalHeadCard"></div>
+            <div class="card" style="margin-top:12px;">
+              <div class="goal-add">
+                <span class="goal-add-plus">＋</span>
+                <input id="goalAddInput" placeholder="添加子待办，回车即可连续添加" autocomplete="off">
+              </div>
+              <div id="goalSubList"></div>
+              <div id="goalDoneWrap"></div>
+            </div>
           </div>
 
           <!-- 屏幕 B：任务编辑 -->
@@ -1002,7 +1082,7 @@
               <label class="fld" style="margin-top:12px;">备注（可选）</label>
               <textarea id="noteEBody" rows="3" placeholder="关键细节、链接、想法…"></textarea>
 
-              <label class="fld" style="margin-top:12px;">人生方向</label>
+              <label class="fld" style="margin-top:12px;">所属目标</label>
               <select id="noteEDir" class="sel"></select>
 
               <label class="fld" style="margin-top:12px;">分类</label>
@@ -1054,24 +1134,24 @@
         </div>
       </div>
 
-      <!-- 人生方向弹窗 -->
+      <!-- 目标弹窗 -->
       <div class="modal" id="dirModal">
         <div class="modal-box card">
-          <div class="card-h"><h2 id="dirModalTitle">人生方向</h2><button class="btn ghost sm" id="dirCancel">✕</button></div>
+          <div class="card-h"><h2 id="dirModalTitle">目标</h2><button class="btn ghost sm" id="dirCancel">✕</button></div>
           <label class="fld">图标</label>
           <input id="dirEmoji" maxlength="2" style="width:64px;font-size:20px;">
-          <label class="fld" style="margin-top:10px;">方向名称</label>
-          <input id="dirName" placeholder="如：医学成长">
+          <label class="fld" style="margin-top:10px;">目标名称</label>
+          <input id="dirName" placeholder="如：3 个月上线工作台 APP">
           <label class="fld" style="margin-top:10px;">对应分类</label>
           <select id="dirCat" class="sel">
             <option>医学</option><option>创业</option><option>金融</option><option>个人</option>
           </select>
-          <label class="fld" style="margin-top:10px;">长期目标</label>
+          <label class="fld" style="margin-top:10px;">目标说明 / 为什么要做</label>
           <textarea id="dirLong" rows="2" placeholder="这一年 / 三年想成为什么样？"></textarea>
-          <label class="fld" style="margin-top:10px;">季度目标</label>
+          <label class="fld" style="margin-top:10px;">阶段里程碑</label>
           <textarea id="dirQuarter" rows="2" placeholder="本季度要推进的关键结果"></textarea>
-          <label class="fld" style="margin-top:10px;">当前任务</label>
-          <div id="dirTasks" class="dir-tasks"></div>
+          <label class="fld" style="margin-top:10px;">目标截止日（可选）</label>
+          <input type="date" id="goalTargetDate" style="padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg2);color:var(--txt);font:inherit;">
           <div style="display:flex;gap:10px;margin-top:14px;justify-content:space-between;align-items:center;">
             <button class="btn ghost" id="dirDelete" style="color:#c0392b;">🗑 删除</button>
             <button class="btn" id="dirSave">保存</button>
@@ -1560,7 +1640,7 @@ function goPage(p){
   $$(".page").forEach(s=>s.classList.toggle("active", s.id==="page-"+p));
 }
 function closeDrawer(){ $("#sidebar").classList.remove("open"); $("#overlay").classList.remove("show"); }
-$$(".nav-btn[data-page]").forEach(b=> b.onclick=()=>{ goPage(b.dataset.page); if(b.dataset.page==="diary") $("#djStack").classList.remove("show-edit"); if(b.dataset.page==="notes"){ closeNoteModals(); $("#noteStack").classList.remove("show-edit"); renderActHome(); } if(b.dataset.page==="idea"){ setIdeaScreen(0); renderIdeaHome(); } if(b.dataset.page==="cog"){ setCogScreen(0); renderCogHome(); } if(window.innerWidth<=820) closeDrawer(); });
+$$(".nav-btn[data-page]").forEach(b=> b.onclick=()=>{ goPage(b.dataset.page); if(b.dataset.page==="diary") $("#djStack").classList.remove("show-edit"); if(b.dataset.page==="notes"){ closeNoteModals(); setNoteScreen(0); renderActHome(); } if(b.dataset.page==="idea"){ setIdeaScreen(0); renderIdeaHome(); } if(b.dataset.page==="cog"){ setCogScreen(0); renderCogHome(); } if(window.innerWidth<=820) closeDrawer(); });
 $("#hamburger").onclick = ()=>{ $("#sidebar").classList.add("open"); $("#overlay").classList.add("show"); };
 $("#overlay").onclick = closeDrawer;
 
@@ -1608,7 +1688,7 @@ const DEFAULT_DIRS = [
   {emoji:"💰", name:"金融认知", cat:"金融"},
   {emoji:"🌱", name:"个人成长", cat:"个人"},
 ];
-function normDir(d){ d=d||{}; d.deleted=!!d.deleted; d.cat=d.cat||"个人"; d.longGoal=d.longGoal||""; d.quarterGoal=d.quarterGoal||""; return d; }
+function normDir(d){ d=d||{}; d.deleted=!!d.deleted; d.cat=d.cat||"个人"; d.longGoal=d.longGoal||""; d.quarterGoal=d.quarterGoal||""; d.targetDate=d.targetDate||null; d.ord=Number.isFinite(d.ord)?d.ord:0; d.archived=!!d.archived; return d; }
 let directions = LS.get("wb_directions", undefined);
 if(directions===undefined){
   directions = DEFAULT_DIRS.map(x=>({id:uid(), emoji:x.emoji, name:x.name, cat:x.cat, longGoal:"", quarterGoal:"", created:Date.now(), updatedAt:Date.now(), deleted:false, deviceId}));
@@ -1617,6 +1697,9 @@ if(directions===undefined){
 directions = (directions||[]).map(normDir);
 function persistDirections(){ LS.set("wb_directions", directions); }
 function saveDirections(){ persistDirections(); scheduleSync(); }
+
+/* 虚拟「📥 未归类」：纯派生对象，永不写入 directions、永不参与同步（零迁移、可回滚） */
+const GOAL_INBOX = { id:"__inbox__", emoji:"📥", name:"未归类", cat:"个人", longGoal:"", quarterGoal:"", targetDate:null, virtual:true };
 
 function normReview(r){ r=r||{}; r.deleted=!!r.deleted; r.topPush=r.topPush||""; r.tomorrow=r.tomorrow||""; r.note=r.note||""; return r; }
 let reviews = (LS.get("wb_reviews", [])||[]).map(normReview);
@@ -2020,7 +2103,8 @@ document.addEventListener("keydown", e=>{ if(e.key!=="Escape") return;
   else if($("#dirModal").classList.contains("open")) closeModal("#dirModal");
   else if($("#reviewModal").classList.contains("open")) closeModal("#reviewModal");
   else if($("#taskListModal").classList.contains("open")) closeModal("#taskListModal");
-  else if($("#noteStack").classList.contains("show-edit")) $("#noteStack").classList.remove("show-edit");
+  else if($("#noteStack").classList.contains("show-edit")) setNoteScreen(noteEditReturn);
+  else if($("#noteStack").classList.contains("show-goal")) setNoteScreen(0);
 });
 function esc(s){ return (s||"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m])); }
 
@@ -2345,11 +2429,74 @@ const PRIO_RANK = { high:0, mid:1, low:2 };
 const PRIO_LABEL = { high:"🔴 必须完成", mid:"🟡 重要推进", low:"🟢 可选事项" };
 function statusDot(s){ return `<span class="status-dot" style="background:${STATUS_COLOR[s]||'#95a5a6'}" title="${STATUS_LABEL[s]||''}"></span>`; }
 function dirBadge(n){ const d=n.dir?directions.find(x=>x.id===n.dir):null; return d?`${d.emoji} ${esc(d.name)}`:`🏷 ${n.cat}`; }
+
+/* ---- 目标（Goal）派生层：纯函数、零副作用、零持久化 ----
+   三个观察轴定位：🎯 我的目标（结构轴：这件大事由哪些小事组成，本模块）
+   🎯 今日聚焦（时间轴·当下：今天做哪几件，可跨目标）  🌙 每日复盘（时间轴·回看：今天推进了多少）
+   三者互不替代。 */
+function isVirtualGoal(gid){ return gid === GOAL_INBOX.id; }
+function goalById(gid){
+  if(isVirtualGoal(gid)) return GOAL_INBOX;
+  return directions.find(d=>!d.deleted && d.id===gid) || null;
+}
+function goalList(){
+  const real = directions.filter(d=>!d.deleted && !d.archived)
+    .sort((a,b)=>(a.ord||0)-(b.ord||0) || (a.created||0)-(b.created||0));
+  const hasInbox = notes.some(n=>!n.deleted && !n.dir);
+  if(hasInbox) return real.concat([GOAL_INBOX]);
+  return real;
+}
+function goalStats(gid){
+  const subs = notes.filter(n=>!n.deleted && (isVirtualGoal(gid) ? !n.dir : n.dir===gid));
+  const done = subs.filter(n=>n.status==="done").length;
+  return { subs, total: subs.length, done,
+           pct: subs.length ? Math.round(done*100/subs.length) : 0,
+           nextStep: goalNextStep(subs) };
+}
+function goalNextStep(subs){
+  const und = subs.filter(n=>n.status!=="done");
+  und.sort((a,b)=> (PRIO_RANK[a.prio]??1)-(PRIO_RANK[b.prio]??1)
+                 || (a.dueDate||"~").localeCompare(b.dueDate||"~"));
+  return und[0] || null;
+}
+
+/* 三屏状态机：0=目标总览 1=目标详情(show-goal) 2=子待办编辑(show-edit) */
+let noteScreen = 0, curGoalId = null, noteEditReturn = 0;
+function setNoteScreen(i){
+  const s = $("#noteStack");
+  s.classList.toggle("show-goal", i === 1);
+  s.classList.toggle("show-edit", i === 2);
+  noteScreen = i;
+}
+function addSubTask(gid, title){
+  title = (title||"").trim(); if(!title) return null;
+  const dir  = isVirtualGoal(gid) ? null : (gid || null);
+  const goal = dir ? directions.find(d=>d.id===dir) : null;
+  const n = normNote({
+    id: uid(), title, body:"", prio:"mid", dueDate:null,
+    done:false, doneAt:null, fav:false,
+    ord: notes.filter(x=>!x.deleted).length,
+    created: Date.now(), updatedAt: Date.now(), deleted:false, deviceId,
+    dir, cat: goal ? goal.cat : "个人", eta:null, status:"todo", focus:false
+  });
+  notes.push(n); saveNotes();
+  return n;
+}
+function toggleSubDone(id){
+  const n = notes.find(x=>x.id===id); if(!n) return;
+  const to = n.status === "done" ? "todo" : "done";
+  n.status = to;
+  n.done   = (to === "done");
+  n.doneAt = (to === "done") ? Date.now() : null;
+  n.updatedAt = Date.now();
+  saveNotes();
+  renderGoalSubs(curGoalId); renderGoalHead(curGoalId);
+}
 function fillNoteDirs(){
-  $("#noteEDir").innerHTML = ['<option value="">— 不关联 —</option>'].concat(directions.filter(d=>!d.deleted).map(d=>`<option value="${d.id}">${d.emoji} ${esc(d.name)}</option>`)).join("");
+  $("#noteEDir").innerHTML = ['<option value="">— 未归类 —</option>'].concat(directions.filter(d=>!d.deleted).map(d=>`<option value="${d.id}">${d.emoji} ${esc(d.name)}</option>`)).join("");
 }
 function fillTaskListFilters(){
-  $("#tlDir").innerHTML = ['<option value="">全部方向</option>'].concat(directions.filter(d=>!d.deleted).map(d=>`<option value="${d.id}">${d.emoji} ${esc(d.name)}</option>`)).join("");
+  $("#tlDir").innerHTML = ['<option value="">全部目标</option>'].concat(directions.filter(d=>!d.deleted).map(d=>`<option value="${d.id}">${d.emoji} ${esc(d.name)}</option>`)).join("");
   $("#tlStatus").innerHTML = '<option value="">全部状态</option><option value="todo">未开始</option><option value="doing">进行中</option><option value="done">已完成</option>';
 }
 
@@ -2358,7 +2505,7 @@ function renderNotes(){ renderActHome(); }
 function renderActHome(){
   const h = new Date().getHours();
   $("#actGreet").textContent = (h<6?"夜深了，": h<11?"早上好，": h<14?"中午好，": h<18?"下午好，": "晚上好，") + "今天也在推进重要的事。";
-  renderActFocus(); renderActDirs(); renderActTasks(); renderActReview();
+  renderActFocus(); renderActGoals(); renderActTasks(); renderActReview();
 }
 function focusTasks(){
   const today=todayStr();
@@ -2387,23 +2534,88 @@ function renderActFocus(){
   $$("#actFocus [data-open-note]").forEach(b=> b.onclick=()=> openNoteEdit(b.dataset.openNote));
   $$("#actFocus .focus-star").forEach(b=> b.onclick=()=>{ const n=notes.find(x=>x.id===b.dataset.focus); if(!n) return; n.focus=!n.focus; n.updatedAt=Date.now(); saveNotes(); renderActFocus(); $("#focusCount").textContent=focusTasks().length+" 项"; });
 }
-function renderActDirs(){
-  const live=directions.filter(d=>!d.deleted); const el=$("#actDirs");
-  if(!live.length){ el.innerHTML='<div class="empty">还没有人生方向，点「＋ 新方向」建立你的长期主线。</div>'; return; }
-  el.innerHTML = live.map(d=>{
-    const tasks=notes.filter(n=>!n.deleted && n.dir===d.id);
-    const doing=tasks.filter(n=>n.status==="doing").length;
-    const todo=tasks.filter(n=>n.status==="todo").length;
-    return `<div class="dir-card" data-open-dir="${d.id}">
-      <div class="dir-emoji">${d.emoji}</div>
-      <div class="dir-body">
-        <div class="dir-name">${esc(d.name)}</div>
-        <div class="dir-q">${d.quarterGoal?esc(d.quarterGoal):'<span class="dim">未设季度目标</span>'}</div>
-        <div class="dir-prog">当前任务 ${tasks.length} · 进行中 ${doing} · 待办 ${todo}</div>
+function renderActGoals(){
+  const list=goalList(); const el=$("#actGoals");
+  if(!list.length){ el.innerHTML='<div class="empty">还没有目标，点「＋ 新目标」建立你的第一个大目标。</div>'; return; }
+  el.innerHTML = list.map(g=>{
+    const st=goalStats(g.id);
+    const prog = st.total>0
+      ? `<div class="goal-prog"><i style="width:${st.pct}%"></i></div><div class="goal-prog-txt">${st.done}/${st.total} · ${st.pct}%</div>`
+      : `<div class="goal-q"><span class="dim">还没有子待办，进去加第一条吧</span></div>`;
+    const next = st.nextStep ? `<div class="goal-next">下一步：${esc(st.nextStep.title)}</div>` : "";
+    return `<div class="goal-card ${g.virtual?'virtual':''}" data-open-goal="${g.id}">
+      <div class="goal-emoji">${g.emoji}</div>
+      <div class="goal-body">
+        <div class="goal-name">${esc(g.name)}</div>
+        <div class="goal-q">${g.quarterGoal?esc(g.quarterGoal):(g.virtual?'<span class="dim">没有归属目标的散装待办</span>':'<span class="dim">未设阶段里程碑</span>')}</div>
+        ${prog}
+        ${next}
       </div>
     </div>`;
   }).join("");
-  $$("#actDirs [data-open-dir]").forEach(b=> b.onclick=()=> openDir(b.dataset.openDir));
+  $$("#actGoals [data-open-goal]").forEach(b=> b.onclick=()=> openGoal(b.dataset.openGoal));
+}
+function openGoal(gid){
+  curGoalId = gid;
+  setNoteScreen(1);
+  renderGoalHead(gid);
+  renderGoalSubs(gid);
+  setTimeout(()=>{ const inp=$("#goalAddInput"); if(inp) inp.focus(); }, 300);
+}
+function renderGoalHead(gid){
+  const g = goalById(gid);
+  $("#goalDetailName").textContent = g ? (g.emoji+" "+g.name) : "目标详情";
+  const editBtn = $("#goalEditBtn");
+  const head = $("#goalHeadCard");
+  if(isVirtualGoal(gid)){
+    editBtn.style.display = "none";
+    head.innerHTML = `<h2>📥 未归类</h2>
+      <div class="goal-guide">这些是没有归属目标的待办，可逐条点击后移动到「所属目标」里。</div>`;
+    return;
+  }
+  editBtn.style.display = "";
+  const st = goalStats(gid);
+  const prog = st.total>0
+    ? `<div class="goal-prog goal-prog-lg"><i style="width:${st.pct}%"></i></div><div class="goal-prog-txt">${st.done}/${st.total} · ${st.pct}% 已完成</div>`
+    : `<div class="goal-q"><span class="dim">还没有子待办，在下面加第一条吧</span></div>`;
+  const due = g.targetDate ? ` · 截止 ${esc(g.targetDate)}` : "";
+  head.innerHTML = `<h2>${g.emoji} ${esc(g.name)}</h2>
+    <div class="goal-q">${esc(g.longGoal||"")}${due}</div>
+    ${prog}`;
+}
+function renderGoalSubs(gid){
+  const st = goalStats(gid);
+  const und = st.subs.filter(n=>n.status!=="done");
+  und.sort((a,b)=> (PRIO_RANK[a.prio]??1)-(PRIO_RANK[b.prio]??1) || (a.dueDate||"~").localeCompare(b.dueDate||"~"));
+  const done = st.subs.filter(n=>n.status==="done");
+  const el = $("#goalSubList");
+  if(!st.subs.length){ el.innerHTML='<div class="empty sm">还没有子待办，在输入框里敲回车加第一条吧。</div>'; }
+  else if(!und.length){ el.innerHTML='<div class="empty sm">全部完成 🎉</div>'; }
+  else{
+    el.innerHTML = und.map(n=>`
+      <div class="sub-row" data-open-note="${n.id}">
+        <button class="sub-chk" data-sub="${n.id}"></button>
+        <div class="task-main"><div class="task-title">${esc(n.title)}</div>
+        <div class="task-meta"><span class="dir-badge sm">${dirBadge(n)}</span><span class="prio-chip2 prio-${n.prio}">${PRIO_LABEL[n.prio]}</span></div></div>
+        <button class="focus-star ${n.focus?'on':''}" data-focus="${n.id}" title="今日聚焦">${n.focus?'★':'☆'}</button>
+      </div>`).join("");
+  }
+  const dw = $("#goalDoneWrap");
+  dw.innerHTML = done.length ? `<button class="goal-done-toggle" id="goalDoneToggle">已完成 ${done.length} 项 ▾</button><div id="goalDoneList" style="display:none;">${done.map(n=>`
+    <div class="sub-row done" data-open-note="${n.id}">
+      <button class="sub-chk on" data-sub="${n.id}">✓</button>
+      <div class="task-main"><div class="task-title">${esc(n.title)}</div>
+      <div class="task-meta"><span class="dir-badge sm">${dirBadge(n)}</span></div></div>
+    </div>`).join("")}</div>` : "";
+  bindGoalSubEvents();
+}
+function bindGoalSubEvents(){
+  $$("#goalSubList [data-open-note]").forEach(b=> b.onclick=()=>{ noteEditReturn = noteScreen; openNoteEdit(b.dataset.openNote); });
+  $$("#goalDoneList [data-open-note]").forEach(b=> b.onclick=()=>{ noteEditReturn = noteScreen; openNoteEdit(b.dataset.openNote); });
+  $$("#goalSubList .sub-chk").forEach(b=> b.onclick=e=>{ e.stopPropagation(); e.preventDefault(); toggleSubDone(b.dataset.sub); });
+  $$("#goalDoneList .sub-chk").forEach(b=> b.onclick=e=>{ e.stopPropagation(); e.preventDefault(); toggleSubDone(b.dataset.sub); });
+  $$("#goalSubList .focus-star").forEach(b=> b.onclick=e=>{ e.stopPropagation(); const n=notes.find(x=>x.id===b.dataset.focus); if(!n) return; n.focus=!n.focus; n.updatedAt=Date.now(); saveNotes(); renderGoalSubs(curGoalId); });
+  const tg = $("#goalDoneToggle"); if(tg) tg.onclick=()=>{ const l=$("#goalDoneList"); if(l) l.style.display = l.style.display==="none" ? "block" : "none"; };
 }
 function renderActTasks(){
   const list=notes.filter(n=>!n.deleted && n.status!=="done").sort((a,b)=> (PRIO_RANK[a.prio]??1)-(PRIO_RANK[b.prio]??1) || (a.dueDate||"~").localeCompare(b.dueDate||"~")).slice(0,6);
@@ -2420,12 +2632,19 @@ function renderActTasks(){
 function renderActReview(){
   const today=todayStr();
   const doneToday=notes.filter(n=>!n.deleted && n.status==="done" && n.doneAt && fmtDate(new Date(n.doneAt))===today);
+  /* 推进了 M 个目标：今天有子待办完成的真实目标去重计数（dir 为空的不计） */
+  const advGoals = new Set(
+    notes.filter(n=>!n.deleted && n.status==="done" && n.doneAt
+                   && fmtDate(new Date(n.doneAt)) === today && n.dir)
+         .map(n=>n.dir)
+  ).size;
   const invest=times.filter(t=>!t.deleted && t.date===today).reduce((a,b)=>a+(b.dur||0),0);
   const invTxt = invest>=60? (Math.floor(invest/60)+" 小时 "+(invest%60)+" 分") : (invest+" 分钟");
   const r=getReview(today); const el=$("#actReview");
   el.innerHTML = `
     <div class="review-grid">
       <div class="rg"><div class="rg-v">${doneToday.length}</div><div class="rg-k">今天完成</div></div>
+      <div class="rg"><div class="rg-v">${advGoals}</div><div class="rg-k">推进了目标</div></div>
       <div class="rg"><div class="rg-v">${invTxt}</div><div class="rg-k">今日投入 <span class="link-note">·时间账本</span></div></div>
     </div>
     <div class="review-lines">
@@ -2441,6 +2660,7 @@ let editingNoteId=null, noteEPr="mid", noteDone=false;
 function setNotePrio(p){ noteEPr=p; $$("#noteEPrio button").forEach(b=> b.classList.toggle("active", b.dataset.prio===p)); }
 function setNoteDone(d){ noteDone=d; const b=$("#noteDoneToggle"); b.classList.toggle("on", d); b.textContent=d?"✓":"○"; if(!d && $("#noteEStatus").value==="done") $("#noteEStatus").value="todo"; }
 function openNoteEdit(id){
+  noteEditReturn = noteScreen;
   const x=id?notes.find(n=>n.id===id):null;
   editingNoteId=id||null;
   noteDone = x? x.status==="done":false;
@@ -2457,7 +2677,7 @@ function openNoteEdit(id){
   $("#noteEDue").value = x?(x.dueDate||""):"";
   setNotePrio(noteEPr); setNoteDone(noteDone);
   $("#noteDelete").style.display = x?"":"none";
-  $("#noteStack").classList.add("show-edit");
+  setNoteScreen(2);
   setTimeout(()=> $("#noteETitle").focus(), 280);
 }
 function saveNoteEdit(){
@@ -2480,12 +2700,19 @@ function saveNoteEdit(){
     notes.push(normNote({id:uid(),title,body,prio:noteEPr,dueDate:due,done:status==="done",doneAt:status==="done"?Date.now():null,fav:false,ord:notes.filter(n=>!n.deleted).length,created:Date.now(),updatedAt:Date.now(),deleted:false,deviceId,dir,cat,eta,status,focus}));
     toast("已添加");
   }
-  saveNotes(); renderActHome(); $("#noteStack").classList.remove("show-edit");
+  saveNotes();
+  setNoteScreen(noteEditReturn);
+  if(noteEditReturn===1 && curGoalId){ renderGoalSubs(curGoalId); renderGoalHead(curGoalId); }
+  else renderActHome();
 }
 function deleteNoteEdit(){
-  if(!editingNoteId){ $("#noteStack").classList.remove("show-edit"); return; }
+  if(!editingNoteId){ setNoteScreen(noteEditReturn); return; }
   notes=notes.map(n=> n.id===editingNoteId?Object.assign({},n,{deleted:true,updatedAt:Date.now()}):n);
-  saveNotes(); renderActHome(); $("#noteStack").classList.remove("show-edit"); toast("已删除");
+  saveNotes();
+  setNoteScreen(noteEditReturn);
+  if(noteEditReturn===1 && curGoalId){ renderGoalSubs(curGoalId); renderGoalHead(curGoalId); }
+  else renderActHome();
+  toast("已删除");
 }
 function quickDue(k){
   if(!k){ $("#noteEDue").value=""; return; }
@@ -2495,36 +2722,40 @@ function quickDue(k){
   $("#noteEDue").value = fmtDate(d);
 }
 
-/* ---- 人生方向 ---- */
-let editingDirId=null;
-function openDir(id){
+/* ---- 目标（Goal）增删改 ---- */
+let editingGoalId=null;
+function openGoalEdit(id){
+  if(isVirtualGoal(id)){ toast("未归类不是真实目标，不能编辑"); return; }
   const d=id?directions.find(x=>x.id===id):null;
-  editingDirId=id||null;
-  $("#dirModalTitle").textContent = d?"人生方向":"新建人生方向";
+  editingGoalId=id||null;
+  $("#dirModalTitle").textContent = d?"编辑目标":"新建目标";
   $("#dirEmoji").value = d?d.emoji:"🎯";
   $("#dirName").value = d?d.name:"";
   $("#dirCat").value = d?d.cat:"个人";
   $("#dirLong").value = d?d.longGoal:"";
   $("#dirQuarter").value = d?d.quarterGoal:"";
-  const tasks=d?notes.filter(n=>!n.deleted && n.dir===d.id):[];
-  $("#dirTasks").innerHTML = tasks.length? tasks.map(n=>`<div class="dir-task" data-open-note="${n.id}">${statusDot(n.status)} ${esc(n.title)} <span class="prio-chip2 prio-${n.prio}">${PRIO_LABEL[n.prio]}</span></div>`).join("") : '<div class="empty sm">该方向下还没有任务。</div>';
-  $$("#dirTasks [data-open-note]").forEach(b=> b.onclick=()=>{ closeModal("#dirModal"); openNoteEdit(b.dataset.openNote); });
+  $("#goalTargetDate").value = d?(d.targetDate||""):"";
   $("#dirDelete").style.display = d?"":"none";
   openModal("#dirModal");
 }
-function saveDir(){
+function saveGoal(){
+  if(isVirtualGoal(editingGoalId)){ toast("未归类不是真实目标，不能保存"); return; }
   const name=$("#dirName").value.trim();
-  if(!name){ toast("给方向起个名字"); return; }
-  const obj={ emoji:($("#dirEmoji").value.trim()||"🎯"), name, cat:$("#dirCat").value, longGoal:$("#dirLong").value.trim(), quarterGoal:$("#dirQuarter").value.trim(), updatedAt:Date.now() };
-  if(editingDirId){ const d=directions.find(x=>x.id===editingDirId); if(!d) return; Object.assign(d,obj); toast("已保存"); }
-  else { directions.push(Object.assign({id:uid(),created:Date.now(),deleted:false,deviceId},obj)); toast("已创建"); }
-  saveDirections(); renderActHome(); closeModal("#dirModal");
+  if(!name){ toast("给目标起个名字"); return; }
+  const obj={ emoji:($("#dirEmoji").value.trim()||"🎯"), name, cat:$("#dirCat").value, longGoal:$("#dirLong").value.trim(), quarterGoal:$("#dirQuarter").value.trim(), targetDate:$("#goalTargetDate").value||null, updatedAt:Date.now() };
+  if(editingGoalId){ const d=directions.find(x=>x.id===editingGoalId); if(!d) return; Object.assign(d,obj); toast("已保存"); }
+  else { directions.push(Object.assign({id:uid(),created:Date.now(),deleted:false,deviceId,ord:0,archived:false},obj)); toast("已创建"); }
+  saveDirections(); renderActGoals();
+  if(noteScreen===1 && curGoalId===editingGoalId) renderGoalHead(curGoalId);
+  closeModal("#dirModal");
 }
-function deleteDir(){
-  if(!editingDirId){ closeModal("#dirModal"); return; }
-  notes=notes.map(n=> n.dir===editingDirId?Object.assign({},n,{dir:null,updatedAt:Date.now()}):n);
-  directions=directions.map(d=> d.id===editingDirId?Object.assign({},d,{deleted:true,updatedAt:Date.now()}):d);
-  saveNotes(); saveDirections(); renderActHome(); closeModal("#dirModal"); toast("已删除方向（任务保留）");
+function deleteGoal(){
+  if(!editingGoalId){ closeModal("#dirModal"); return; }
+  if(isVirtualGoal(editingGoalId)){ closeModal("#dirModal"); return; }
+  if(!confirm("删除该目标后，其下的子待办会保留在『📥 未归类』中。确定删除吗？")) return;
+  notes=notes.map(n=> n.dir===editingGoalId?Object.assign({},n,{dir:null,updatedAt:Date.now()}):n);
+  directions=directions.map(d=> d.id===editingGoalId?Object.assign({},d,{deleted:true,updatedAt:Date.now()}):d);
+  saveNotes(); saveDirections(); setNoteScreen(0); renderActHome(); closeModal("#dirModal"); toast("已删除目标（子待办保留）");
 }
 
 /* ---- 每日复盘 ---- */
@@ -2571,7 +2802,7 @@ function closeNoteModals(){ closeModal("#dirModal"); closeModal("#reviewModal");
 
 /* ---- 事件绑定 ---- */
 $("#noteFab").onclick=()=> openNoteEdit(null);
-$("#noteBack").onclick=()=> $("#noteStack").classList.remove("show-edit");
+$("#noteBack").onclick=()=>{ setNoteScreen(noteEditReturn); if(noteEditReturn===1 && curGoalId){ renderGoalSubs(curGoalId); renderGoalHead(curGoalId); } else renderActHome(); };
 $("#noteSave").onclick=saveNoteEdit;
 $("#noteDelete").onclick=deleteNoteEdit;
 $("#noteDoneToggle").onclick=()=> setNoteDone(!noteDone);
@@ -2579,11 +2810,24 @@ $$("#noteEPrio button").forEach(b=> b.onclick=()=> setNotePrio(b.dataset.prio));
 $$("[data-quickdue]").forEach(b=> b.onclick=()=> quickDue(b.dataset.quickdue));
 $("#noteEStatus").onchange=()=>{ if($("#noteEStatus").value==="done") setNoteDone(true); else setNoteDone(false); };
 $("#noteEDir").onchange=()=>{ const d=directions.find(x=>x.id===$("#noteEDir").value); if(d) $("#noteECat").value=d.cat; };
-$("#actNewDir").onclick=()=> openDir(null);
+$("#actNewGoal").onclick=()=> openGoalEdit(null);
 $("#actAllTasks").onclick=openTaskList;
-$("#dirSave").onclick=saveDir;
-$("#dirDelete").onclick=deleteDir;
+$("#dirSave").onclick=saveGoal;
+$("#dirDelete").onclick=deleteGoal;
 $("#dirCancel").onclick=()=> closeModal("#dirModal");
+$("#goalBack").onclick=()=>{ setNoteScreen(0); renderActHome(); };
+$("#goalEditBtn").onclick=()=> openGoalEdit(curGoalId);
+$("#goalAddInput").addEventListener("keydown", e=>{
+  if(e.key!=="Enter") return;
+  if(e.isComposing || e.keyCode===229) return;   // 中文输入法组合中，禁止提交
+  const v=e.target.value.trim();
+  if(!v) return;
+  addSubTask(curGoalId, v);
+  e.target.value="";
+  renderGoalSubs(curGoalId);        // 只重建列表与已完成折叠，不触碰输入框
+  renderGoalHead(curGoalId);        // 只重建头部（进度）
+  e.target.focus();                 // 兜底：保证焦点不丢，可连续添加
+});
 $("#reviewSave").onclick=saveReview;
 $("#reviewCancel").onclick=()=> closeModal("#reviewModal");
 $("#tlCancel").onclick=()=> closeModal("#taskListModal");
@@ -2594,24 +2838,325 @@ $("#reviewModal").addEventListener("click", e=>{ if(e.target.id==="reviewModal")
 $("#taskListModal").addEventListener("click", e=>{ if(e.target.id==="taskListModal") closeModal("#taskListModal"); });
 renderActHome();
 
-/* ============ GitHub 探索 ============ */
-const STOP = new Set("的 了 我 你 他 她 它 我们 你们 他们 想 要 一个 一种 做 怎么 如何 什么 哪 些 关于 一个 可以 能 在 是 有 和 与 把 被 让 用 来 到 给 的 地 得 这 那 这个 那个 进行 实现 开发 创建 设计 需要 希望 最好 比较 一下 自己 我们 你们".split(" "));
-const MAP = { "记账":"expense tracker", "记账本":"accounting", "博客":"blog", "网站":"website", "待办":"todo", "任务":"task manager", "笔记":"note taking", "相册":"photo gallery", "照片":"photo", "整理":"organize", "自动化":"automation auto", "爬虫":"crawler scraper", "聊天":"chat", "机器人":"bot", "人工智能":"ai", "机器学习":"machine learning", "深度学习":"deep learning", "数据":"data", "可视化":"visualization dashboard", "电商":"ecommerce", "商城":"shop", "音乐":"music", "视频":"video", "下载":"downloader", "翻译":"translation", "日历":"calendar", "天气":"weather", "地图":"map", "论坛":"forum", "wiki":"wiki", "文档":"documentation", "API":"api", "数据库":"database", "缓存":"cache", "搜索":"search engine", "推荐":"recommender", "人脸识别":"face recognition", "ocr":"ocr", "语音":"speech", "文字识别":"ocr", "简历":"resume", "番茄":"pomodoro", "习惯":"habit tracker", "健身":"fitness", "饮食":"diet nutrition", "验证":"验证 认证 verification otp", "验证码":"验证码 otp", "认证":"认证 验证 auth", "登录":"登录 login", "绕过":"绕过 bypass", "突破":"突破 bypass crack", "手机":"手机 mobile phone", "短信":"短信 sms", "助手":"助手 assistant", "代填":"代填 autofill", "滑块":"滑块 slider captcha", "打码":"打码 captcha" };
-function buildQuery(text){
-  let q = text.toLowerCase();
-  const synSet = new Set();
-  for(const [cn, ens] of Object.entries(MAP)){
-    if(q.includes(cn)) ens.split(/\s+/).forEach(e=>{ if(e) synSet.add(e); });
+/* ============ GitHub 探索：功能语义匹配（L0 意图解析 → L1 多路召回 → L2 LLM 重排 → L3 降级） ============ */
+/* 关键约束：GitHub repo search 自由词是 AND 语义 —— core 只取前 2 个关键词，多余语义走 topic 或独立召回路。
+   彻底放弃 OR/括号写法（repo search 解析不可靠）。wbCfg 只在回调/异步函数体内读取（声明在 L48xx，模块顶层读会 TDZ）。 */
+const GH_STOP_CN = new Set("的 了 我 你 他 她 它 我们 你们 他们 想 要 一个 一种 做 怎么 如何 什么 哪 些 关于 可以 能 在 是 有 和 与 把 被 让 用 来 到 给 地 得 这 那 这个 那个 进行 实现 开发 创建 设计 需要 希望 最好 比较 一下 自己 找 找个 帮我 一个 东西 工具 类似 那种 好用 不错 靠谱 简单 快速 免费 开源 推荐 支持 管理 每天 每日 自动".split(" "));
+const GH_STOP_EN = new Set("i want need find looking for a an the my me some good best please help with of and or to for is are it this that can could would should have has use using build make create new online free tool like how what where who".split(" "));
+const GH_WEAK = new Set(["app","tool","project","software","program","system","library","framework","application","platform","utility","website","web","site","manager"]);
+/* 词典：[中文|别名1|别名2, 英文关键词(空格分隔，置信度降序), 可选 GitHub topic slug]。初始化展开并按中文长度降序（最长匹配优先） */
+const GH_DICT = [
+  // —— 效率工具 ——
+  ["待办|todo|任务清单|清单|todolist", "todo task", "todo-list"],
+  ["任务管理|任务", "task manager", ""],
+  ["番茄钟|番茄工作法|专注计时|番茄", "pomodoro timer", "pomodoro"],
+  ["习惯|打卡|习惯养成", "habit tracker", "habit-tracker"],
+  ["日历|日程|排期", "calendar schedule", "calendar"],
+  ["提醒|闹钟|提醒事项", "reminder alarm", ""],
+  ["看板|kanban", "kanban board", "kanban"],
+  ["时间追踪|计时器|时间管理", "time tracking", "time-tracking"],
+  ["笔记|记笔记|随手记", "note taking", "notes"],
+  ["便签|备忘录|stickies", "sticky notes memo", ""],
+  ["待办清单|checklist", "checklist", ""],
+  ["项目看板|任务看板", "project board", "project-management"],
+  ["周报|日报|工作汇报", "weekly report timesheet", ""],
+  ["桌面小组件|桌面便签", "desktop widget", "widget"],
+  // —— 笔记知识 ——
+  ["双链|双向链接|zettelkasten", "bidirectional notes zettelkasten", "zettelkasten"],
+  ["大纲|outliner", "outliner outline", ""],
+  ["剪藏|网页剪藏|保存网页|网页转markdown", "web clipper markdown", "web-clipper"],
+  ["电子书|epub|阅读器", "ebook reader epub", "ebook"],
+  ["pdf批注|pdf注释|pdf标注", "pdf annotation", "pdf"],
+  ["wiki|知识库|知识管理", "wiki knowledge base", "wiki"],
+  ["思维导图|脑图|mindmap", "mindmap mind map", ""],
+  ["卡片笔记|闪卡|anki", "flashcards spaced repetition", "flashcards"],
+  ["文献管理|论文|reference", "paper reference manager", "reference-manager"],
+  ["markdown编辑器|马克down", "markdown editor", "markdown"],
+  ["本地笔记|obsidian", "local notes markdown", "obsidian"],
+  ["书签|网页收藏|收藏夹", "bookmark manager", "bookmarks"],
+  ["文本转语音|tts|朗读", "text to speech tts", "tts"],
+  ["语音转文字|转写|whisper", "speech to text transcription", "speech-to-text"],
+  // —— 财务 ——
+  ["记账本|记账|账本|开支|花销|账单", "expense ledger", "expense-tracker"],
+  ["预算|理财|省钱", "budget personal finance", "budget"],
+  ["发票|报销", "invoice receipt", "invoice"],
+  ["加密货币|比特币|区块链|web3", "crypto blockchain web3", "web3"],
+  ["股票|炒股|行情|股价", "stock market quotes", "stock-market"],
+  ["量化|回测|选股", "quant trading backtest", "quantitative-finance"],
+  ["基金|定投", "fund investment", "investing"],
+  ["汇率|外汇|货币转换", "currency exchange converter", "currency"],
+  ["薪酬|工资|人力", "payroll hr", "hr"],
+  ["房贷|贷款|计算器", "loan mortgage calculator", "finance"],
+  ["支付|收银|电子钱包", "payment wallet", "payments"],
+  ["对账|分账|结算", "reconciliation settlement", "fintech"],
+  // —— AI/ML ——
+  ["本地大模型|本地llm|离线大模型|ollama", "local llm ollama", "llm"],
+  ["大模型|语言模型|gpt|llm", "large language model llm", "llm"],
+  ["rag|检索增强|知识库问答", "rag retrieval augmented generation", "rag"],
+  ["向量库|向量数据库|embedding", "vector database embeddings", "vector-database"],
+  ["微调|finetune|训练模型", "fine tuning", "fine-tuning"],
+  ["智能体|agent|ai代理", "ai agent autonomous", "ai-agents"],
+  ["提示词|prompt|咒语", "prompt engineering", "prompt-engineering"],
+  ["语音合成|文字转语音", "text to speech", "tts"],
+  ["文生图|图像生成|绘画|stable diffusion", "image generation stable diffusion", "stable-diffusion"],
+  ["人脸识别|面部识别", "face recognition", "computer-vision"],
+  ["目标检测|物体识别|yolo", "object detection yolo", "computer-vision"],
+  ["机器学习|ml", "machine learning", "machine-learning"],
+  ["深度学习|神经网络|nn", "deep learning neural network", "deep-learning"],
+  ["自然语言处理|nlp|分词", "nlp natural language processing", "nlp"],
+  ["语音识别|语音助手|speech", "speech recognition", "speech-recognition"],
+  ["ocr|文字识别|图片转文字", "ocr optical character recognition", "ocr"],
+  ["聊天机器人|chatbot|对话", "chatbot conversational", "chatbot"],
+  ["推荐系统|推荐算法|推荐", "recommender system", "recommender-system"],
+  ["模型部署|推理|llm推理", "llm inference serving", "llm"],
+  ["transformer|注意力机制", "transformer attention", "deep-learning"],
+  ["语义搜索|向量搜索", "semantic search", "vector-search"],
+  ["知识图谱|关系图谱", "knowledge graph", "knowledge-graph"],
+  // —— 数据 ——
+  ["爬虫|抓取|采集|spider", "crawler scraper spider", "web-scraping"],
+  ["数据可视化|图表|dashboard", "data visualization dashboard", "data-visualization"],
+  ["报表|报告|bi", "reporting bi analytics", "business-intelligence"],
+  ["etl|数据管道|数据同步", "etl data pipeline", "etl"],
+  ["数据清洗|数据整理", "data cleaning", "data"],
+  ["表格|excel|电子表格", "spreadsheet excel", "spreadsheet"],
+  ["数据分析|分析工具", "data analysis", "data-analysis"],
+  ["数据挖掘|大数据", "data mining", "data-mining"],
+  ["流处理|实时数据|kafka", "streaming kafka", "stream-processing"],
+  ["时序数据库|监控数据", "time series database", "time-series"],
+  ["json工具|json格式化", "json formatter", "json"],
+  ["csv处理|csv", "csv parser", "csv"],
+  ["数据库客户端|db工具", "database client gui", "database"],
+  ["数据迁移|数据库迁移", "database migration", "database"],
+  ["自然语言转sql|sql生成", "text to sql", "nlp"],
+  // —— 媒体 ——
+  ["图片处理|图像处理|修图", "image processing", "image-processing"],
+  ["视频编辑|剪辑|视频处理", "video editor processing", "video-editing"],
+  ["视频下载|youtube下载", "video downloader youtube", "youtube-dl"],
+  ["音乐播放|音乐下载", "music player downloader", "music"],
+  ["转码|格式转换|ffmpeg", "transcoder ffmpeg", "ffmpeg"],
+  ["压缩|解压|zip|rar", "compression zip archive", "compression"],
+  ["去水印|水印", "watermark remover", "image-processing"],
+  ["字幕|srt|视频字幕", "subtitle srt", "subtitles"],
+  ["截图|截屏|录屏|屏幕录制", "screenshot screen recording", "screenshot"],
+  ["gif制作|动图", "gif maker", "gif"],
+  ["壁纸|桌面美化", "wallpaper", ""],
+  ["相册管理|照片整理|图片整理", "photo organizer", "photo-management"],
+  ["图像压缩|图片压缩", "image compression", "image-processing"],
+  ["播放器|流媒体", "media player streaming", "media-player"],
+  ["播客|有声书|podcast", "podcast audiobook", "podcast"],
+  ["音频处理|修音|均衡器", "audio processing equalizer", "audio"],
+  // —— Web / 前端 ——
+  ["博客|hexo|hugo", "blog static site", "blog"],
+  ["静态网站|静态站", "static site generator", "static-site-generator"],
+  ["组件库|ui库|前端组件", "ui component library", "ui-components"],
+  ["表单构建|表单生成", "form builder", "forms"],
+  ["富文本|编辑器|wysiwyg", "rich text editor wysiwyg", "wysiwyg"],
+  ["图表库|echarts|chart", "chart library", "charts"],
+  ["前端框架|web框架", "web framework", "web"],
+  ["html模板|页面模板", "html template", "web"],
+  ["渐进式应用|pwa", "pwa progressive web app", "pwa"],
+  ["浏览器扩展|chrome插件|油猴|userscript", "chrome extension userscript", "chrome-extension"],
+  ["响应式|移动端适配", "responsive design", "css"],
+  ["css框架|样式", "css framework", "css"],
+  ["网页截图|页面截图", "web screenshot", ""],
+  ["网址缩短|短链接", "url shortener", "url-shortener"],
+  ["落地页|登录页|landing", "landing page", "web"],
+  // —— 后端 / 基建 ——
+  ["api网关|网关", "api gateway", "api-gateway"],
+  ["消息队列|mq|rabbitmq", "message queue", "message-queue"],
+  ["定时任务|cron|调度", "cron scheduler", "scheduler"],
+  ["日志分析|日志查看", "log viewer analyzer", "logging"],
+  ["监控|告警|指标", "monitoring alerting metrics", "monitoring"],
+  ["容器|docker|kubernetes|k8s", "docker kubernetes container", "kubernetes"],
+  ["微服务|服务发现", "microservices", "microservices"],
+  ["缓存|redis|分布式缓存", "cache redis", "cache"],
+  ["全文搜索|搜索引擎", "search engine full text", "search"],
+  ["邮件发送|smtp|邮件客户端", "email client smtp", "email"],
+  ["文件上传|对象存储", "file upload object storage", "storage"],
+  ["websocket|实时通信", "websocket realtime", "websocket"],
+  ["grpc|rpc|远程调用", "grpc rpc", "grpc"],
+  ["身份认证|oauth|sso", "oauth sso authentication", "authentication"],
+  ["权限管理|rbac|acl", "rbac permission", "authorization"],
+  ["后台任务|任务队列|队列", "background job queue", "job-queue"],
+  ["api文档|swagger|openapi", "openapi swagger api docs", "openapi"],
+  ["配置中心|环境变量", "config manager", "config"],
+  ["限流|熔断|网关策略", "rate limiting circuit breaker", "api-gateway"],
+  // —— 数据库 ——
+  ["数据库|关系型数据库|mysql|postgres", "database sql", "database"],
+  ["kv存储|键值存储|leveldb", "key value store", "database"],
+  ["时序数据库|influxdb|prometheus", "time series influxdb", "time-series"],
+  ["数据库迁移工具", "database migration tool", "database"],
+  ["orm|对象关系映射", "orm object relational", "orm"],
+  ["sqlite|嵌入式数据库", "sqlite embedded database", "sqlite"],
+  ["nosql|文档数据库|mongodb", "nosql mongodb", "nosql"],
+  ["图数据库|neo4j", "graph database", "graph-database"],
+  ["内存数据库|缓存数据库", "in memory database", "database"],
+  ["数据库管理|db admin", "database admin", "database"],
+  ["备份工具|数据备份", "backup tool", "backup"],
+  ["数据同步|异构同步", "data sync replication", "data-sync"],
+  // —— 运维 ——
+  ["部署|发布|上线", "deploy release", "deployment"],
+  ["ci|cd|持续集成|流水线", "ci cd pipeline", "ci-cd"],
+  ["反向代理|nginx|负载均衡", "reverse proxy nginx", "reverse-proxy"],
+  ["内网穿透|frp|ngrok|隧道", "intranet penetration tunnel", "tunnel"],
+  ["堡垒机|跳板机", "bastion jump host", "devops"],
+  ["运维面板|服务器管理", "server management panel", "devops"],
+  ["自动化运维|ansible|脚本", "ansible automation ops", "devops"],
+  ["容器编排|docker compose|k8s管理", "container orchestration", "kubernetes"],
+  ["ssh工具|终端|远程连接", "ssh terminal client", "ssh"],
+  ["vpn|代理工具|科学上网", "vpn proxy", "proxy"],
+  ["服务管理|开机自启|systemd", "systemd service manager", "linux"],
+  ["文件同步|网盘|同步盘", "file sync cloud storage", "file-sync"],
+  ["构建工具|打包|webpack", "build tool bundler", "build-tool"],
+  ["git|版本控制|代码托管", "git version control", "git"],
+  ["code review|代码审查", "code review", "devops"],
+  // —— 安全 ——
+  ["密码管理|密码库|密码生成", "password manager generator", "password-manager"],
+  ["加密|解密|aes|rsa", "encryption decryption", "cryptography"],
+  ["漏洞扫描|安全扫描|渗透", "vulnerability scanner penetration", "security"],
+  ["安全审计|日志审计", "security audit", "security"],
+  ["验证码|captcha|打码", "captcha solver", "captcha"],
+  ["滑块验证|滑动验证", "slider captcha", "captcha"],
+  ["双因素|2fa|两步验证", "two factor authentication 2fa", "2fa"],
+  ["防火墙|waf", "firewall waf", "security"],
+  ["病毒查杀|恶意软件|木马", "malware scanner antivirus", "security"],
+  ["端到端加密|加密通信", "end to end encryption", "cryptography"],
+  ["隐私保护|数据脱敏", "privacy protection data redaction", "privacy"],
+  ["指纹识别|生物识别", "fingerprint biometrics", "security"],
+  // —— 通讯 ——
+  ["聊天|im|即时通讯|社交", "chat instant messaging", "chat"],
+  ["邮件客户端|邮件管理", "email client", "email"],
+  ["消息推送|通知推送|push", "push notification", "push-notifications"],
+  ["机器人|telegram bot|discord bot", "telegram discord bot", "bot"],
+  ["rss|订阅|阅读器", "rss reader", "rss"],
+  ["论坛|社区|discourse", "forum community", "forum"],
+  ["评论系统|评论", "comment system", ""],
+  ["客服|工单|ticket", "helpdesk ticketing", "customer-support"],
+  ["直播|推流|拉流", "live streaming", "streaming"],
+  ["视频会议|会议", "video conference", "webrtc"],
+  ["协同办公|团队协作|共享", "team collaboration", "collaboration"],
+  ["文件传输|传文件", "file transfer", "file-sharing"],
+  ["短信发送|sms网关", "sms gateway", "sms"],
+  ["公众号|wechat", "wechat bot", "wechat"],
+  // —— 移动 / 桌面 ——
+  ["安卓|android|apk", "android app", "android"],
+  ["ios|苹果|iphone", "ios swift app", "ios"],
+  ["桌面应用|electron|跨平台桌面", "electron desktop app", "electron"],
+  ["tauri|轻量桌面", "tauri desktop", "tauri"],
+  ["跨平台|flutter|react native", "cross platform flutter react native", "cross-platform"],
+  ["小程序|微信小程序", "wechat mini program", "wechat"],
+  ["移动应用|手机app|app", "mobile app", "mobile"],
+  ["游戏引擎|游戏开发", "game engine development", "gamedev"],
+  ["鸿蒙|harmonyos", "harmonyos", "harmonyos"],
+  ["全局快捷键|热键|快捷键", "global hotkey", "desktop"],
+  ["系统托盘|托盘应用", "system tray", "desktop"],
+  // —— 生活健康 ——
+  ["健身|运动|锻炼", "fitness workout", "fitness"],
+  ["饮食|营养|卡路里|热量", "diet nutrition calorie", "health"],
+  ["睡眠|睡眠监测|助眠", "sleep tracking", "health"],
+  ["菜谱|做饭|食谱", "recipe cooking", "recipes"],
+  ["旅行|行程|攻略", "travel itinerary", "travel"],
+  ["背单词|学习|记忆|闪卡", "learning flashcards vocabulary", "education"],
+  ["冥想|正念|放松", "meditation mindfulness", "meditation"],
+  ["跑步|骑行|运动记录", "running cycling tracker", "fitness"],
+  ["喝水|习惯提醒", "water reminder habit", "health"],
+  ["宠物|养猫|养狗", "pet care", ""],
+  ["园艺|植物|种植", "gardening plants", ""],
+  ["天气|天气预报", "weather forecast", "weather"],
+  ["地图|导航|定位", "map navigation", "maps"],
+  ["翻译|翻译工具|词典", "translation dictionary", "translation"],
+  ["简历|求职|面试", "resume builder job", "resume"],
+  ["学术|论文|科研", "academic research paper", "academic"],
+  ["代码助手|编程助手|自动补全", "code assistant autocomplete", "developer-tools"],
+  ["画图|绘图|白板", "drawing whiteboard", "drawing"],
+  ["设计工具|ui设计|设计稿", "design tool ui", "design"],
+  // —— 保留并强化原 55 词中关键验证/绕过场景 ——
+  ["绕过|突破|破解", "bypass bypass", ""],
+  ["手机验证|手机号|电话号码", "phone number verification", "sms"],
+  ["代填|自动填写|autofill", "autofill form filler", ""],
+  ["验证|校验|verification", "verification validation", ""],
+  ["登录|login|登陆", "login authentication", "authentication"],
+  ["助手|assistant|助理", "assistant helper", ""]
+];
+/* 初始化：展开词典 + 按中文长度降序（最长匹配优先，配合掩码消歧，如「记账本」命中后不再触发「记账」） */
+/* ⚠️ t[0] 是「中文|别名|别名」管道串，必须先按 | 拆开再注册，否则 includes 对任何中文恒为 false */
+const GH_TERMS = [];
+for (const t of GH_DICT){
+  for (const cn of t[0].split("|")){
+    GH_TERMS.push({ cn, en: t[1].split(/\s+/).filter(Boolean), topic: t[2]||"" });
   }
-  const ens = (q.match(/[a-z0-9]+/g) || []).filter(w=>w.length>=2);
-  const anchor = [...new Set(ens)];
-  const syn = [...synSet].slice(0, 8);
-  if(anchor.length){
-    if(syn.length) return anchor.map(a=> a + " (" + syn.join(" OR ") + ")").join(" ");
-    return anchor.slice(0,6).join(" ");
+}
+GH_TERMS.sort((a,b)=> b.cn.length - a.cn.length);
+/* 语言识别：[匹配串(小写), 规范名]；规范名为空 = 只掩码不加语言过滤（如 前端） */
+const GH_LANG = [
+  ["python","Python"],["golang","Go"],["go语言","Go"],["java","Java"],["javascript","JavaScript"],
+  ["typescript","TypeScript"],["ts","TypeScript"],["rust","Rust"],["c++","C++"],["cpp","C++"],
+  ["c语言","C"],["c#","C#"],["csharp","C#"],["php","PHP"],["ruby","Ruby"],["swift","Swift"],
+  ["kotlin","Kotlin"],["dart","Dart"],["flutter","Dart"],["react","JavaScript"],["vue","JavaScript"],
+  ["node","JavaScript"],["前端",""],["后端",""],["网页",""]
+];
+/* L0：意图解析。七步算法：词典最长匹配+掩码 → 语言识别 → 拉丁 token → 停用词/弱词 → 关键词优先级拼装 → topics → unresolved */
+function parseIntent(text){
+  let low = (text||"").toLowerCase();
+  const strong = [], topics = [], dropped = [];
+  for(const t of GH_TERMS){
+    if(low.includes(t.cn)){
+      t.en.forEach(e=>{ if(e && !strong.includes(e)) strong.push(e); });
+      if(t.topic && !topics.includes(t.topic)) topics.push(t.topic);
+      low = low.split(t.cn).join(" ");   // ⚠️ 掩码：防长词命中后短词二次命中
+    }
   }
-  if(syn.length) return syn.join(" OR ");
-  return text.trim().slice(0,40);
+  let language = null;
+  for(const [pat, canon] of GH_LANG){
+    if(low.includes(pat)){
+      low = low.split(pat).join(" ");
+      if(canon) language = canon;
+      break;
+    }
+  }
+  const latin = [], weak = [];
+  (low.match(/[a-z0-9+#.-]{2,}/g) || []).forEach(w=>{
+    const wl = w.toLowerCase();
+    if(GH_STOP_EN.has(wl)){ dropped.push(w); return; }
+    if(GH_WEAK.has(wl)){ weak.push(wl); return; }
+    if(!latin.includes(wl)) latin.push(wl);
+  });
+  const keywords = [];
+  strong.forEach(k=>{ if(!keywords.includes(k)) keywords.push(k); });
+  latin.forEach(k=>{ if(!keywords.includes(k)) keywords.push(k); });
+  weak.forEach(k=>{ if(!keywords.includes(k)) keywords.push(k); });
+  return { raw:text, keywords: keywords.slice(0,3), topics: topics.slice(0,2),
+           language, archivedFalse:true, unresolved: keywords.length===0, dropped };
+}
+/* L1：查询构造。⚠️ AND 语义：core 严格取前 2 个关键词。有 Token 才多路召回（匿名 10 次/分钟会撞限流）。 */
+function buildGhQueries(it, hasToken){
+  const core = it.keywords.slice(0, 2).join(" ");
+  const lang = it.language ? ` language:${it.language}` : "";
+  const base = `${core}${lang} archived:false`;
+  if(!hasToken){
+    return [{ lane:"all", badge:"🔎 关键词命中", q:`${base} in:name,description,readme` }];
+  }
+  const lanes = [
+    { lane:"name",   badge:"🔎 关键词命中", q:`${base} in:name,description` },
+    { lane:"readme", badge:"📄 README 命中", q:`${base} in:readme` },
+  ];
+  if(it.topics.length){
+    lanes.push({ lane:"topic", badge:"🏷 话题命中",
+                 q:`topic:${it.topics[0]}${lang} ${it.keywords[0]||""} archived:false`.trim() });
+  }
+  return lanes;
+}
+/* P1 放宽重搜留桩：零结果时依次 去 in:readme → 减词 → 去 language */
+function relaxIntent(it){
+  const c = Object.assign({}, it, { keywords: it.keywords.slice(), topics: it.topics.slice() });
+  return c;
+}
+function ghHasToken(){
+  return !!(localStorage.getItem("wb_gh_token") ||
+            (typeof wbCfg !== "undefined" && wbCfg.github_proxy_detail === "GH_TOKEN"));
+}
+function llmReady(){
+  return !!(localStorage.getItem("wb_llm_token") || (typeof wbCfg !== "undefined" && wbCfg.llm_rerank));
 }
 $("#ghSearch").onclick = doGhSearch;
 // 连接自检：逐层暴露真实状态，避免「搜不到」时只能靠猜
@@ -2639,16 +3184,16 @@ $("#ghDiag").onclick = async ()=>{
   if(cfg){
     L.push("③ 出网通道：" + (cfg.github_proxy ? "✅ 已配置 " + JSON.stringify(cfg.github_proxy_detail) : "❌ 未配置代理且无 GH_TOKEN，访问 GitHub 大概率被墙"));
   }
-  // ④ 真实打一次 GitHub
+  // ④ 真实打一次 GitHub（不传 sort → best-match 相关度排序）
   try{
     const t0 = performance.now();
-    const r = await fetch("/api/github/search?q=test&sort=stars&order=desc&per_page=1", {cache:"no-store"});
+    const r = await fetch("/api/github/search?q=test&per_page=1", {cache:"no-store"});
     const ms = Math.round(performance.now()-t0);
     if(r.ok){
       const j = await r.json();
       L.push("④ GitHub 搜索：✅ 成功，命中 " + (j.total_count||0).toLocaleString() + " 个仓库（耗时 " + ms + "ms）");
       L.push("");
-      L.push("结论：链路完全正常，可以直接搜索。");
+      L.push("结论：链路完全正常，可以直接搜索。（若仍明显按 Star 排序，说明后端未重启，请重启 python server.py）");
     }else{
       let body = ""; try{ body = JSON.stringify(await r.json()); }catch(_){}
       L.push("④ GitHub 搜索：❌ HTTP " + r.status + "  " + body);
@@ -2660,6 +3205,25 @@ $("#ghDiag").onclick = async ()=>{
   }catch(e){
     L.push("④ GitHub 搜索：❌ 请求异常 " + e.message);
   }
+  // ⑤ 语义重排可用性（P1；未配置是正常态 ⚪，不是故障）
+  try{
+    const t0 = performance.now();
+    const r = await fetch("/api/search/rerank", {method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({query:"测试", candidates:[{full_name:"a/b", description:"test", topics:[], language:"", stars:0, pushed_at:""}]})});
+    const ms = Math.round(performance.now()-t0);
+    const j = await r.json().catch(()=>({}));
+    if(r.ok && j.ok){
+      L.push("⑤ 语义重排：✅ 已配置 "+(j.model||"?")+"（试调 "+ms+"ms）");
+    }else if(r.status===404){
+      L.push("⑤ 语义重排：⚠️ 接口不存在（后端未重启？当前为关键词模式，功能正常）");
+    }else if(j.reason==="llm_not_configured"){
+      L.push("⑤ 语义重排：⚪ 未配置（当前为关键词模式，功能正常）");
+    }else{
+      L.push("⑤ 语义重排：❌ 调用失败："+(j.reason||("http_"+r.status)));
+    }
+  }catch(e){
+    L.push("⑤ 语义重排：❌ 请求异常 " + e.message);
+  }
   out.textContent = L.join("\n");
 };
 $("#ghInput").addEventListener("keydown", e=>{ if(e.key==="Enter") doGhSearch(); });
@@ -2668,8 +3232,12 @@ $$("#ghExamples .cat-chip").forEach(b=> b.onclick=()=>{ $("#ghInput").value=b.da
 $("#ghSaveToken").onclick = ()=>{ const v=$("#ghToken").value.trim(); if(!v){ toast("请输入 Token"); return; } localStorage.setItem("wb_gh_token", v); toast("GitHub Token 已保存"); };
 $("#ghClearToken").onclick = ()=>{ localStorage.removeItem("wb_gh_token"); $("#ghToken").value=""; toast("已清除 Token"); };
 { const saved=localStorage.getItem("wb_gh_token"); if(saved) $("#ghToken").value=saved; }
+// LLM Key 存取（仅存本机；会经 server.py 转发给 LLM 端点做语义重排）
+$("#llmSaveToken").onclick = ()=>{ const v=$("#llmToken").value.trim(); if(!v){ toast("请输入 Key"); return; } localStorage.setItem("wb_llm_token", v); toast("LLM Key 已保存"); };
+$("#llmClearToken").onclick = ()=>{ localStorage.removeItem("wb_llm_token"); $("#llmToken").value=""; toast("已清除 Key"); };
+{ const saved=localStorage.getItem("wb_llm_token"); if(saved) $("#llmToken").value=saved; }
 async function ghFetch(q, token, signal){
-  const params = "q="+encodeURIComponent(q)+"&sort=stars&order=desc&per_page=30";
+  const params = "q="+encodeURIComponent(q)+"&per_page=50";
   const directUrl = "https://api.github.com/search/repositories?"+params;
   // 1) 优先走后端代理（自托管 / 浏览器直连被墙时由服务器去访问 GitHub）
   try{
@@ -2683,9 +3251,190 @@ async function ghFetch(q, token, signal){
   if(token) h2["Authorization"] = "Bearer " + token;
   return fetch(directUrl, {headers:h2, signal});
 }
-async function doGhSearch(){
-  const raw=$("#ghInput").value.trim();
-  if(!raw){ toast("请描述你的需求"); return; }
+/* 多路召回：并发各路，单路失败不影响其他路；全部失败时返回首条错误状态供上层判断 */
+async function ghMultiFetch(lanes, token, signal){
+  const results = await Promise.allSettled(lanes.map(lane =>
+    ghFetch(lane.q, token, signal).then(async r=>{
+      const data = await r.json().catch(()=>({items:[]}));
+      return { lane: lane.lane, badge: lane.badge, status: r.status, data, items: data.items||[] };
+    })
+  ));
+  const ok = results.filter(x=>x.status==="fulfilled" && x.value.status>=200 && x.value.status<300);
+  if(!ok.length){
+    const first = results.find(x=>x.status==="fulfilled") || {value:{status:0, data:{}}};
+    return { errorStatus: first.value.status, laneResults: [] };
+  }
+  return { errorStatus: null, laneResults: ok.map(x=>x.value) };
+}
+/* 按 full_name 合并去重：记录命中路、徽章、bestRank（该路内位次） */
+function mergeLanes(laneResults){
+  const map = new Map();
+  laneResults.forEach(lr => lr.items.forEach((repo, idx)=>{
+    const k = repo.full_name;
+    if(!map.has(k)) map.set(k, { repo, lanes:[], badges:[], bestRank: idx });
+    const e = map.get(k);
+    if(!e.lanes.includes(lr.lane)){ e.lanes.push(lr.lane); e.badges.push(lr.badge); }
+    if(idx < e.bestRank) e.bestRank = idx;
+  }));
+  return [...map.values()];
+}
+/* P0 排序：多路命中优先（既在名字里又在 README 里 → 相关性更高），同命中数尊重 GitHub best-match 位次；不引入 stars 加权 */
+function rankP0(list){
+  list.forEach(e => { e.p0score = e.lanes.length * 1000 - e.bestRank; });
+  return list.sort((a,b)=> b.p0score - a.p0score || a.repo.full_name.localeCompare(b.repo.full_name));
+}
+let curIntent = null;
+function renderGhIntent(it){
+  curIntent = it;
+  const el = $("#ghIntent");
+  if(!it){ el.style.display="none"; el.innerHTML=""; return; }
+  if(it.unresolved){
+    el.style.display="block";
+    el.innerHTML = `<div class="gi-h">🧠 我理解到的需求</div>
+      <div>我没能把你的需求翻译成英文关键词。试试补充英文关键词（如 <b>todo</b>、<b>markdown</b>、<b>llm</b>），或换种说法。</div>`;
+    return;
+  }
+  const chip = (label, key, idx)=>`<span class="intent-chip" data-k="${key}" data-i="${idx}">${label} <span class="ic-x">×</span></span>`;
+  const kw = it.keywords.map((k,i)=>chip(esc(k), "kw", i)).join("");
+  const tp = it.topics.map((k,i)=>chip("话题:"+esc(k), "tp", i)).join("");
+  const lang = it.language ? `<span class="intent-chip">语言:${esc(it.language)}</span>` : '<span class="intent-chip">语言:未限定</span>';
+  const arch = it.archivedFalse ? '<span class="intent-chip">排除已归档</span>' : "";
+  const dropped = it.dropped && it.dropped.length ? `<div>已忽略：<span style="opacity:.6">${it.dropped.map(esc).join(" · ")}</span></div>` : "";
+  el.style.display="block";
+  el.innerHTML = `<div class="gi-h">🧠 我理解到的需求 <span style="float:right;font-weight:600;cursor:pointer" id="ghIntentCollapse">收起 ▴</span></div>
+    <div>关键词 ${kw||'<span style="opacity:.6">（无）</span>'}</div>
+    <div>话题 ${tp||'<span style="opacity:.6">（无）</span>'}</div>
+    <div>过滤 ${lang} ${arch}</div>
+    ${dropped}
+    <button class="btn ghost sm" id="ghIntentResub" style="margin-top:6px;">🔄 重新搜索</button>`;
+  $("#ghIntentCollapse").onclick = ()=> el.style.display="none";
+  $("#ghIntentResub").onclick = ()=> doGhSearch(true);
+  $$("#ghIntent .intent-chip[data-k]").forEach(b=> b.onclick=()=>{
+    const k = b.dataset.k, i = +b.dataset.i;
+    if(k==="kw") curIntent.keywords.splice(i,1);
+    if(k==="tp") curIntent.topics.splice(i,1);
+    renderGhIntent(curIntent);
+  });
+}
+function renderGhList(list, stage){
+  const el = $("#ghList");
+  if(!list.length){ ghEmptyView(); return; }
+  el.innerHTML = list.map(e=>{
+    const r = e.repo;
+    const badges = e.badges.slice(0,2).map(b=>`<span class="match-badge">${b}</span>`).join("");
+    const sem = (stage==="llm" && e.llmScore!=null)
+      ? `<span class="match-badge mb-sem-${e.llmScore>=80?'hi':e.llmScore>=60?'mid':'low'}">🧠 语义匹配 ${e.llmScore}</span>` : "";
+    const reason = (stage==="llm" && e.llmReason) ? `<div class="match-reason">💡 ${esc(e.llmReason)}</div>` : "";
+    return `<a class="repo fade-in" href="${r.html_url}" target="_blank" rel="noopener">
+      <div class="repo-head">
+        <div class="name">${esc(r.full_name)} ⭐ ${(r.stargazers_count||0).toLocaleString()}</div>
+        <div class="match-badges">${sem}${badges}</div>
+      </div>
+      <div class="desc">${esc(r.description||"（无描述）")}</div>
+      ${reason}
+      <div class="meta">
+        ${r.language?("<span>语言：<b>"+esc(r.language)+"</b></span>"):""}
+        <span>🍴 Fork：<b>${(r.forks_count||0).toLocaleString()}</b></span>
+        <span>📅 更新：<b>${(r.pushed_at||"").slice(0,10)}</b></span>
+        ${r.topics&&r.topics.length?("<span>🏷 "+(r.topics.slice(0,4).map(t=>"#"+t).join(" "))+"</span>"):""}
+      </div>
+    </a>`;
+  }).join("");
+}
+function ghErrorView(status, hasTok){
+  const list=$("#ghList");
+  let msg;
+  if(status===403){
+    msg = hasTok
+      ? "⚠️ GitHub 返回 403。若刚填了 Token，请确认 Token 有效（任意 scope 均可，无 scope 的空 Token 也行）。"
+      : "⚠️ 触发了 GitHub 频率限制：<b>匿名搜索仅 10 次/分钟</b>。展开上方「GitHub Token」填入你的 Token 即可提升到 5000 次/小时，或等 1 分钟后再试。";
+  }else if(status===401){
+    msg = "⚠️ Token 无效（401）。请检查后重新保存。";
+  }else if(status===429){
+    msg = "⚠️ 本机限流（429），请稍等几秒再试。";
+  }else if(status===502){
+    msg = "⚠️ 后端出不了网。确认代理软件开着，或用 GH_PROXY=http://127.0.0.1:7890 启动 server.py。";
+  }else if(status>=500){
+    msg = "⚠️ 后端代理 GitHub 失败（"+status+"）。请确认运行 server.py 的机器能正常访问 GitHub（若走代理请保持代理开启）。";
+  }else{
+    msg = "⚠️ 搜索失败："+status;
+  }
+  list.innerHTML='<div class="empty">'+msg+'</div>'; $("#ghCount").textContent="";
+}
+function ghEmptyView(){
+  const list=$("#ghList");
+  const it = curIntent;
+  const words = it ? [...it.keywords, ...(it.topics||[])].map(w=>`<span class="intent-chip">${esc(w)}</span>`).join("") : "";
+  list.innerHTML = `<div class="empty">
+    <div style="margin-bottom:6px;">没找到相关仓库。</div>
+    <div>已用检索词：${words||'（无）'}</div>
+    ${it?`<div>原话：${esc(it.raw)}</div>`:""}
+    <div style="margin-top:10px;">建议：① 补英文关键词（如 todo、markdown、llm）② 减少限定词 ③ 试试相近话题</div>
+  </div>`;
+}
+function ghDegradeBar(reason){
+  const el = $("#ghDegrade");
+  let txt;
+  if(reason==="http_404") txt = "语义重排接口不存在（后端可能需重启），当前为关键词匹配结果";
+  else if(reason==="timeout") txt = "语义重排超时，当前为关键词匹配结果";
+  else if(reason==="network") txt = "语义重排网络异常，当前为关键词匹配结果";
+  else if(reason==="rate_limited") txt = "重排请求过于频繁，稍后再试";
+  else if(reason==="parse_failed") txt = "语义重排暂不可用";
+  else if(reason==="upstream_error") txt = "语义重排暂不可用";
+  else txt = "语义重排暂不可用";
+  el.style.display="flex";
+  el.innerHTML = `<span>🔎 当前为关键词匹配结果 · ${txt}</span><button class="gd-x" id="ghDegradeClose">✕</button>`;
+  $("#ghDegradeClose").onclick = ()=> el.style.display="none";
+}
+function toCandidate(e){
+  const r = e.repo;
+  return { full_name: r.full_name, description: (r.description||"").slice(0,200),
+           topics: (r.topics||[]).slice(0,6), language: r.language||"",
+           stars: r.stargazers_count||0, pushed_at: r.pushed_at||"" };
+}
+/* L2：LLM 语义重排（两段式）。前端 8s Abort < 服务端 10s；seq 竞态守卫整包丢弃；任何失败静默降级。 */
+async function rerankAsync(query, list, seq){
+  const ctrl = new AbortController();
+  const to = setTimeout(()=>ctrl.abort(), 8000);
+  try{
+    const h = { "Content-Type": "application/json" };
+    const k = localStorage.getItem("wb_llm_token"); if(k) h["X-LLM-Token"] = k;
+    const r = await fetch("/api/search/rerank", { method:"POST", headers:h, signal: ctrl.signal,
+      body: JSON.stringify({ query, candidates: list.slice(0,25).map(toCandidate) }) });
+    const j = await r.json().catch(()=>({ ok:false, fallback:true, reason:"parse_failed" }));
+    if(seq !== ghReqSeq) return;                            // ⚠️ 竞态：旧请求的响应整包丢弃
+    if(!r.ok || !j.ok){ ghDegradeBar(j.reason || (r.status===404 ? "http_404" : "http_"+r.status)); return; }
+    applyRerank(list, j.ranked, seq);
+  }catch(e){
+    if(seq === ghReqSeq) ghDegradeBar(e.name === "AbortError" ? "timeout" : "network");
+  }finally{
+    clearTimeout(to);
+    if(seq === ghReqSeq) $("#ghRerankBar").style.display = "none";
+  }
+}
+/* 原地重排：LLM 命中的按 score 降序排前，未覆盖的按 p0score 接在后面；徽章切「🧠 语义匹配 NN」+ 理由淡入 */
+function applyRerank(list, ranked, seq){
+  if(seq !== ghReqSeq) return;
+  const byName = new Map();
+  ranked.forEach(x=> byName.set(x.full_name, x));
+  const rankedItems = [], rest = [];
+  list.forEach(e=>{
+    const rr = byName.get(e.repo.full_name);
+    if(rr){ e.llmScore = rr.score; e.llmReason = rr.reason; rankedItems.push(e); }
+    else rest.push(e);
+  });
+  rankedItems.sort((a,b)=> (b.llmScore||0) - (a.llmScore||0));
+  const ordered = rankedItems.concat(rest.sort((a,b)=> b.p0score - a.p0score));
+  renderGhList(ordered, "llm");
+}
+let ghReqSeq = 0;
+async function doGhSearch(useCur){
+  const seq = ++ghReqSeq;                                   // ⚠️ 每次搜索递增竞态令牌
+  const raw = $("#ghInput").value.trim();
+  let it;
+  if(useCur && curIntent) it = curIntent;                   // chip 删词后重搜：用已修改的意图
+  else if(!raw){ toast("请描述你的需求"); return; }
+  else it = parseIntent(raw);
   // 协议检测：file:// 直接打开时无法连接后端代理，必须经由 server.py
   if(location.protocol === "file:"){
     const card=$("#ghResultCard"); card.style.display="block";
@@ -2693,45 +3442,41 @@ async function doGhSearch(){
     $("#ghList").innerHTML='<div class="empty">⚠️ 当前是用「文件方式」直接打开的，GitHub 搜索无法连接后端。<br><br>正确用法：<br>1) 在本项目目录运行 <b>python server.py</b><br>2) 浏览器访问 <b>http://localhost:8000</b><br>（Windows 用户也可直接双击本项目里的 <b>start.bat</b>）</div>';
     return;
   }
-  const q=buildQuery(raw);
+  renderGhIntent(it);
   const card=$("#ghResultCard"); card.style.display="block";
+  $("#ghDegrade").style.display="none"; $("#ghRerankBar").style.display="none";
   const list=$("#ghList");
-  $("#ghQuery").style.display="block"; $("#ghQuery").textContent="检索词：" + q;
+  $("#ghQuery").style.display="block";
+  $("#ghQuery").textContent = "检索词：" + it.keywords.slice(0,2).join(" ") + (it.language?(" · 语言:"+it.language):"");
   list.innerHTML = '<div class="skeleton" style="width:60%"></div><div class="skeleton" style="width:90%"></div><div class="skeleton" style="width:75%"></div>';
   $("#ghCount").textContent="搜索中…";
+  if(it.unresolved){
+    $("#ghCount").textContent="";
+    list.innerHTML = '<div class="empty">我没能把你的需求翻译成英文关键词，未发起搜索。<br>试试补充英文关键词（如 <b>todo</b>、<b>markdown</b>、<b>llm</b>），或换种说法。</div>';
+    return;
+  }
   try{
     const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(), 12000);
-    const res=await ghFetch(q, localStorage.getItem("wb_gh_token")||"", ctrl.signal);
+    const token = localStorage.getItem("wb_gh_token")||"";
+    const hasTok = ghHasToken();
+    const lanes = buildGhQueries(it, hasTok);
+    const { errorStatus, laneResults } = await ghMultiFetch(lanes, token, ctrl.signal);
     clearTimeout(to);
-    if(res.status===403){
-      const hasTok = !!localStorage.getItem("wb_gh_token");
-      const msg = hasTok
-        ? "⚠️ GitHub 返回 403。若刚填了 Token，请确认 Token 有效（任意 scope 均可，无 scope 的空 Token 也行）。"
-        : "⚠️ 触发了 GitHub 频率限制：<b>匿名搜索仅 10 次/分钟</b>。展开上方「GitHub Token」填入你的 Token 即可提升到 5000 次/小时，或等 1 分钟后再试。";
-      list.innerHTML='<div class="empty">'+msg+'</div>'; $("#ghCount").textContent=""; return;
+    if(seq !== ghReqSeq) return;                            // 竞态：过期响应丢弃
+    if(errorStatus){ ghErrorView(errorStatus, hasTok); return; }
+    const ranked = rankP0(mergeLanes(laneResults));
+    if(seq !== ghReqSeq) return;
+    const total = laneResults.reduce((a,lr)=>a+(lr.data.total_count||0),0);
+    $("#ghCount").textContent = (ranked.length||0)+" 个仓库" + (total?(" · 命中 "+total.toLocaleString()):"");
+    renderGhList(ranked, "p0");                             // ① L1 结果先出（关键词徽章）
+    if(llmReady() && ranked.length){
+      $("#ghRerankBar").style.display = "block";            // ② 细进度条
+      rerankAsync(it.raw, ranked, seq);                     // ③ LLM 返回后原地重排
     }
-    if(res.status===401){ list.innerHTML='<div class="empty">⚠️ Token 无效（401）。请检查后重新保存。</div>'; $("#ghCount").textContent=""; return; }
-    if(res.status>=500){ list.innerHTML='<div class="empty">⚠️ 后端代理 GitHub 失败（'+res.status+'）。请确认运行 server.py 的机器能正常访问 GitHub（若走代理请保持代理开启）。</div>'; $("#ghCount").textContent=""; return; }
-    if(!res.ok){ list.innerHTML='<div class="empty">搜索失败：'+res.status+'</div>'; return; }
-    const data=await res.json();
-    const items=data.items||[];
-    const rlRemain = res.headers.get("X-RateLimit-Remaining");
-    const rlLimit = res.headers.get("X-RateLimit-Limit");
-    $("#ghCount").textContent = (data.total_count||0)+" 个匹配" + (rlRemain!=null ? " · 剩余 "+rlRemain+"/"+rlLimit : "");
-    if(!items.length){ list.innerHTML='<div class="empty">没找到相关仓库，换种说法试试？<br>检索词：'+esc(q)+'<br>原话：'+esc(raw)+'</div>'; return; }
-    list.innerHTML = items.map(r=>`
-      <a class="repo" href="${r.html_url}" target="_blank" rel="noopener">
-        <div class="name">${esc(r.full_name)} ⭐ ${r.stargazers_count.toLocaleString()}</div>
-        <div class="desc">${esc(r.description||"（无描述）")}</div>
-        <div class="meta">
-          ${r.language?("<span>语言：<b>"+esc(r.language)+"</b></span>"):""}
-          <span>🍴 Fork：<b>${r.forks_count.toLocaleString()}</b></span>
-          <span>📅 更新：<b>${r.pushed_at.slice(0,10)}</b></span>
-          ${r.topics&&r.topics.length?("<span>🏷 "+(r.topics.slice(0,4).map(t=>"#"+t).join(" "))+"</span>"):""}
-        </div>
-      </a>`).join("");
   }catch(e){
-    list.innerHTML='<div class="empty">⚠️ 无法连接 GitHub。<br>若你访问的是 <b>http://localhost:8000</b>，请确认 <b>server.py</b> 正在运行；<br>若你是直接双击打开了文件（file://），请改用本地服务器访问：双击本项目里的 <b>start.bat</b>，或运行 <b>python server.py</b> 后打开 http://localhost:8000。<br>关键词：'+esc(q)+'</div>';
+    if(seq !== ghReqSeq) return;
+    list.innerHTML='<div class="empty">⚠️ 无法连接 GitHub。<br>若你访问的是 <b>http://localhost:8000</b>，请确认 <b>server.py</b> 正在运行；<br>若你是直接双击打开了文件（file://），请改用本地服务器访问：双击本项目里的 <b>start.bat</b>，或运行 <b>python server.py</b> 后打开 http://localhost:8000。<br>关键词：'+esc(it.keywords.slice(0,2).join(" "))+'</div>';
+    $("#ghCount").textContent="";
   }
 }
 
