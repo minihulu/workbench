@@ -1827,9 +1827,14 @@ $("#autoTrBtn").onclick = ()=>{
 refreshAutoTrUI();
 
 /* ============ 导航 ============ */
+/** 复位页面滚动：各模块用 translateX 横向切屏，但垂直方向共享 window 滚动；
+ *  切屏时若不复位，新屏会停在上屏的滚动位置（看起来"卡在底部"）。
+ *  PDF 阅读器内部滚动(.pdf-pages)是独立容器，不受此影响。 */
+function resetScroll(){ try{ window.scrollTo(0,0); if(document.documentElement) document.documentElement.scrollTop=0; if(document.body) document.body.scrollTop=0; }catch(_){} }
 function goPage(p){
   $$(".nav-btn[data-page]").forEach(b=>b.classList.toggle("active", b.dataset.page===p));
   $$(".page").forEach(s=>s.classList.toggle("active", s.id==="page-"+p));
+  resetScroll();
 }
 function closeDrawer(){ $("#sidebar").classList.remove("open"); $("#overlay").classList.remove("show"); }
 $$(".nav-btn[data-page]").forEach(b=> b.onclick=()=>{ goPage(b.dataset.page); if(b.dataset.page==="diary") $("#djStack").classList.remove("show-edit"); if(b.dataset.page==="notes"){ closeNoteModals(); setNoteScreen(0); renderActHome(); } if(b.dataset.page==="idea"){ setIdeaScreen(0); renderIdeaHome(); } if(b.dataset.page==="cog"){ setCogScreen(0); renderCogHome(); } if(window.innerWidth<=820) closeDrawer(); });
@@ -2447,7 +2452,7 @@ function renderDjCalendar(){
     const cls=["cal-cell"]; if(has)cls.push("has"); if(ds===today)cls.push("today"); if(ds===djSelDate)cls.push("sel");
     return `<div class="${cls.join(" ")}" data-date="${ds}"><div class="d">${d}</div>${has?'<span class="dot"></span>':''}</div>`;
   }).join("");
-  $$("#djCalGrid .cal-cell[data-date]").forEach(c=> c.onclick=()=>{ djSelDate=c.dataset.date; renderDjCalendar(); loadDjEntry(); $("#djStack").classList.add("show-edit"); });
+  $$("#djCalGrid .cal-cell[data-date]").forEach(c=> c.onclick=()=>{ djSelDate=c.dataset.date; renderDjCalendar(); loadDjEntry(); $("#djStack").classList.add("show-edit"); resetScroll(); });
 }
 function loadDjEntry(){
   const dateEl=$("#djEditorDate"), hintEl=$("#djEditorHint");
@@ -2490,7 +2495,7 @@ function delDjEntry(){
 }
 $("#djPrev").onclick=()=>{ djMonth--; if(djMonth<0){djMonth=11;djYear--;} renderDjCalendar(); };
 $("#djNext").onclick=()=>{ djMonth++; if(djMonth>11){djMonth=0;djYear++;} renderDjCalendar(); };
-$("#djToday").onclick=()=>{ const n=new Date(); djYear=n.getFullYear(); djMonth=n.getMonth(); djSelDate=todayStr(); renderDjCalendar(); loadDjEntry(); $("#djStack").classList.add("show-edit"); };
+$("#djToday").onclick=()=>{ const n=new Date(); djYear=n.getFullYear(); djMonth=n.getMonth(); djSelDate=todayStr(); renderDjCalendar(); loadDjEntry(); $("#djStack").classList.add("show-edit"); resetScroll(); };
 $("#djBack").onclick=()=>{ $("#djStack").classList.remove("show-edit"); };
 $("#djSave").onclick=saveDjEntry;
 $("#djDelete").onclick=delDjEntry;
@@ -2524,6 +2529,7 @@ function setIdeaScreen(level){
   t.classList.remove("show-1","show-2");
   if(level===1) t.classList.add("show-1");
   if(level===2) t.classList.add("show-2");
+  resetScroll();
 }
 function ideaCard(i){
   const st = i.status || "seed";
@@ -2689,6 +2695,7 @@ function setNoteScreen(i){
   s.classList.toggle("show-goal", i === 1);
   s.classList.toggle("show-edit", i === 2);
   noteScreen = i;
+  resetScroll();
 }
 function addSubTask(gid, title){
   title = (title||"").trim(); if(!title) return null;
@@ -4006,6 +4013,7 @@ function setCogScreen(n){
   // show-N 类仅保留 FAB 显隐职责（CSS 中 transform 规则已删除）
   for(let i=1; i<COG_SCREEN_COUNT; i++) t.classList.remove("show-" + i);
   if(n > 0) t.classList.add("show-" + n);
+  resetScroll();
 }
 function cogCount(k){
   if(k==="read") return cogReads.filter(r=>!r.deleted).length;

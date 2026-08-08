@@ -50,6 +50,10 @@ const R_ANCHOR = sliceBetween(
   HTML, 'function getPageLayer(page){', 'function removePdfSelBtn(){', 'anchor+renderer');
 const R_UI = sliceBetween(
   HTML, 'function removePdfSelBtn(){', 'function bookTitleOf(bookId){', 'T03-ui');
+/** 切屏滚动复位：setCogScreen 现会调用 resetScroll()，必须把真实定义注入沙箱，否则 ReferenceError。
+ *  真实抽取（非重写），与 setCogScreen 同源。 */
+const R_RESET_SCROLL = sliceBetween(
+  HTML, 'function resetScroll(){', 'function goPage(p){', 'resetScroll');
 
 /** 暴露沙箱内 let/const 词法绑定给测试（不改源码文本，避免 let→var 改写引入语义漂移） */
 const EXPORTS = `
@@ -63,7 +67,7 @@ globalThis.API = {
   ANNO_TYPES, ANNO_COLORS, ANNO_COLOR_DEFAULT, ANNO_TYPE_ICON, COG_SCREEN_COUNT,
   annosOf, addAnno, updateAnno, removeAnno, getAnno, annoCountOfBook, annoCountOf,
   migrateHighlightsToAnnos, persistAnnos,
-  setCogScreen,
+  setCogScreen, resetScroll,
   bookProgressOf, bookCoverHtml, bookRecordCount, renderCogShelf, bindLongPress, openBookMenu, clampFixed,
   buildTextLayer,
   getPageLayer, buildPageIndex, rangeToOffsets, allIndexOf, resolveAnnoRange,
@@ -305,7 +309,7 @@ function loadSandbox(opts = {}) {
   ctx.$$ = (s, r) => (r || document).querySelectorAll(s);
 
   vm.createContext(ctx);
-  const src = [R_STORE, R_SCREEN, R_SHELF, R_TEXTLAYER, R_ANCHOR, R_UI, EXPORTS].join('\n');
+  const src = [R_STORE, R_SCREEN, R_SHELF, R_TEXTLAYER, R_ANCHOR, R_UI, R_RESET_SCROLL, EXPORTS].join('\n');
   vm.runInContext(src, ctx, { filename: 'workbench-annot.js' });
 
   return {
@@ -1236,6 +1240,17 @@ describe('G 小说风书架（T04）', () => {
     assert.equal(S.ctx.cogScreen, 8, '屏位未夹取上界');
     S.api.setCogScreen(-5);
     assert.equal(S.ctx.cogScreen, 0, '屏位未夹取下界');
+  });
+
+  test('G7c resetScroll 以 (0,0) 复位 window 滚动（修复切屏卡底部）', () => {
+    const S = loadSandbox();
+    assert.equal(typeof S.api.resetScroll, 'function', 'resetScroll 应可被测试调用');
+    let called = null;
+    const orig = S.window.scrollTo;
+    S.window.scrollTo = (x, y) => { called = [x, y]; };
+    S.api.resetScroll();
+    S.window.scrollTo = orig;
+    assert.deepEqual(called, [0, 0], 'resetScroll 应以 (0,0) 复位 window 滚动');
   });
 
   test('G7b CSS 侧宽度也由 --cog-n 驱动（无硬编码 9 屏魔数）', () => {
