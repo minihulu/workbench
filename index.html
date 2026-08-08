@@ -112,6 +112,7 @@
   .btn.ghost:hover{background:var(--line);}
   .btn.danger{background:var(--danger);}
   .btn.sm{padding:7px 12px; font-size:13px; border-radius:9px;}
+  .btn.xs{padding:3px 7px; font-size:12px; border-radius:8px; line-height:1;}
   .btn:disabled{opacity:.5; cursor:not-allowed; transform:none;}
 
   label.fld{display:block; font-size:13px; color:var(--txt2); margin:0 0 6px; font-weight:600;}
@@ -227,6 +228,12 @@
   .matrix-emoji{font-size:20px; flex:none;}
   .matrix-name{font-weight:800; font-size:15px; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .matrix-count{font-size:12px; color:var(--txt2); background:var(--chip); border-radius:999px; padding:1px 8px; flex:none;}
+  .matrix-row-head .matrix-dir-edit,
+  .matrix-row-head .matrix-dir-del{opacity:.55; margin-left:2px; transition:opacity .15s, background .15s;}
+  .matrix-row-head:hover .matrix-dir-edit,
+  .matrix-row-head:hover .matrix-dir-del{opacity:1;}
+  .matrix-row-head .matrix-dir-edit:hover{background:var(--chip);}
+  .matrix-row-head .matrix-dir-del:hover{background:#fde8e8; color:#c0392b;}
   .matrix-cards{display:flex; gap:10px; overflow-x:auto; flex:1; padding-bottom:4px;}
   .matrix-card{position:relative; flex:0 0 210px; width:210px; border:1px solid var(--line); border-radius:12px; background:var(--bg2); padding:10px 12px; cursor:pointer; transition:border-color .15s;}
   .matrix-card:hover{border-color:var(--brand);}
@@ -1118,6 +1125,7 @@
               <div class="card-h">
                 <h2>🗂 行动矩阵</h2>
                 <button class="btn ghost sm" id="kanbanAllTasks">📋 全部任务</button>
+                <button class="btn sm" id="matrixAddDir">＋ 新大任务</button>
               </div>
               <div id="matrixWrap"></div>
             </div>
@@ -2628,6 +2636,8 @@ function renderActHome(){
   const h = new Date().getHours();
   $("#actGreet").textContent = (h<6?"夜深了，": h<11?"早上好，": h<14?"中午好，": h<18?"下午好，": "晚上好，") + "今天也在推进重要的事。";
   renderActFocus(); renderMatrix(); renderTodoCalendar(); renderActReview();
+  const addDirBtn = $("#matrixAddDir");
+  if(addDirBtn) addDirBtn.onclick = ()=> openGoalEdit(null);
 }
 function focusTasks(){
   const today=todayStr();
@@ -2698,6 +2708,7 @@ function matrixRowHtml(g, notesInDir){
       <span class="matrix-emoji">${g.emoji}</span>
       <span class="matrix-name">${esc(g.name)}</span>
       <span class="matrix-count">${notesInDir.length}</span>
+      ${isInbox ? "" : `<button class="btn xs ghost matrix-dir-edit" data-dir-edit="${g.id}" title="编辑大任务">✏️</button><button class="btn xs ghost matrix-dir-del" data-dir-del="${g.id}" title="删除大任务">🗑</button>`}
     </div>
     <div class="matrix-cards">${cards}</div>
   </div>`;
@@ -2721,6 +2732,10 @@ function bindMatrix(){
   if(!wrap || wrap.dataset.bound) return;
   wrap.dataset.bound = "1";
   wrap.addEventListener("click", e=>{
+    const editBtn = e.target.closest("[data-dir-edit]");
+    if(editBtn){ openGoalEdit(editBtn.dataset.dirEdit); return; }
+    const delBtn = e.target.closest("[data-dir-del]");
+    if(delBtn){ if(confirm("删除该大任务？其下子任务将归入「未归类」。")) deleteGoalById(delBtn.dataset.dirDel); return; }
     const dt = e.target.closest("[data-date-toggle]");
     if(dt){ const id=dt.dataset.dateToggle; if(matrixDateRange.has(id)) matrixDateRange.delete(id); else matrixDateRange.add(id); renderMatrix(); return; }
     const chk = e.target.closest("[data-complete]");
@@ -2994,13 +3009,24 @@ function saveGoal(){
   if(noteScreen===1 && curGoalId===editingGoalId) renderGoalHead(curGoalId);
   closeModal("#dirModal");
 }
+/* 按 id 软删一个大任务（direction）：方向软删，其下子任务置 dir=null 归入「未归类」。
+   两个入口共用（矩阵行内删除、目标弹窗删除），保证删除语义一致。 */
+function deleteGoalById(id){
+  if(!id || isVirtualGoal(id)) return;
+  const idx = directions.findIndex(d=>d.id===id);
+  if(idx < 0) return;
+  directions[idx] = Object.assign({}, directions[idx], {deleted:true, updatedAt:Date.now()});
+  notes = notes.map(n=> n.dir===id ? Object.assign({}, n, {dir:null, updatedAt:Date.now()}) : n);
+  saveDirections(); saveNotes();
+  renderActHome();
+  toast("已删除，子任务归入未归类");
+}
 function deleteGoal(){
   if(!editingGoalId){ closeModal("#dirModal"); return; }
   if(isVirtualGoal(editingGoalId)){ closeModal("#dirModal"); return; }
   if(!confirm("删除该目标后，其下的子待办会保留在『📥 未归类』中。确定删除吗？")) return;
-  notes=notes.map(n=> n.dir===editingGoalId?Object.assign({},n,{dir:null,updatedAt:Date.now()}):n);
-  directions=directions.map(d=> d.id===editingGoalId?Object.assign({},d,{deleted:true,updatedAt:Date.now()}):d);
-  saveNotes(); saveDirections(); setNoteScreen(0); renderActHome(); closeModal("#dirModal"); toast("已删除目标（子待办保留）");
+  closeModal("#dirModal");
+  deleteGoalById(editingGoalId);
 }
 
 /* ---- 每日复盘 ---- */
