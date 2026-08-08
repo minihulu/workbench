@@ -272,6 +272,11 @@ function loadSandbox(opts = {}) {
     parseInt, parseFloat, isNaN,
     // ── 外部依赖 stub ──
     LS: { get: (k, d) => (k in calls.ls ? calls.ls[k] : d), set: (k, v) => { calls.ls[k] = v; } },
+    // 轻量设置对象（与源码 settings/Settings 同契约）：autoTranslate 默认 false。
+    // 源码里 Settings 在 workbench.html 顶层定义（line ~1793），落在沙箱抽取区域之外，
+    // 这里补一份 stub，供 bindPdfSelection 读取设置（默认关闭自动翻译，不影响工具栏弹出）。
+    settings: { autoTranslate: false },
+    Settings: { get: (k) => (ctx.settings || {})[k], set: (k, v) => { (ctx.settings ||= { autoTranslate: false })[k] = v; } },
     deviceId: 'devA',
     uid: (() => { let n = 0; return () => 'id' + (++n); })(),
     esc: (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'),
@@ -838,9 +843,9 @@ describe('F 批注交互层', () => {
       { bookId: 'b1', page: 1, startOffset: 0, endOffset: 2, pageTextLen: 10, selectedText: 'ab' });
     const row = S.document.querySelector('.pdf-sel-row');
     assert.ok(row, '选中工具栏未插入 DOM');
-    for (const a of ['hl', 'cm', 'id', 'cp', 'x'])
+    for (const a of ['hl', 'cm', 'id', 'dict', 'tr', 'cp', 'x'])
       assert.ok(row.querySelector(`[data-a="${a}"]`), `工具栏缺按钮 data-a="${a}"`);
-    assert.equal(row.querySelectorAll('button').length, 5, '工具栏按钮数应为 5');
+    assert.equal(row.querySelectorAll('button').length, 7, '工具栏按钮数应为 7');
   });
 
   test('F1b 三种浮层都是 position:fixed（absolute 在滚动容器里会飘）', () => {

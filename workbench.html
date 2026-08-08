@@ -516,7 +516,13 @@
   .cog-cont:hover{border-color:var(--brand); transform:translateY(-1px);}
   .cog-cont-n{font-weight:700; font-size:14px;}
   .cog-cont-d{font-size:12px; color:var(--txt2); margin-top:3px;}
+  /* 首页 hub「更多」折叠 */
+  .cog-more{font-weight:700; color:var(--txt2); text-align:center; background:transparent;}
+  .cog-more-list{display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:10px;}
+  .cog-more-list .cog-more-item{background:transparent; border-style:dashed;}
   @media(max-width:880px){ .cog-dash{grid-template-columns:1fr;} .cog-continue{grid-template-columns:1fr;} }
+  /* 侧栏自动翻译开关状态徽标 */
+  .at-state{display:inline-block; min-width:18px; text-align:center; font-weight:700; color:var(--brand);}
 
   /* ===== 我的书架（小说风竖版封面网格：首页预览 + 书籍库屏共用） ===== */
   .shelf{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:16px 14px;}
@@ -754,6 +760,27 @@
   .vocab-pop .v-k{color:var(--txt2); font-weight:700; margin-right:5px;}
   .vocab-pop .v-close{position:absolute; top:6px; right:10px; cursor:pointer; color:var(--txt2); font-size:14px;}
 
+  /* 查词浮层（本地词典） */
+  .dict-pop{position:absolute; z-index:2300; max-width:270px; background:var(--card); border:1px solid var(--brand); border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.18); padding:12px 14px; font-size:13px; line-height:1.6;}
+  .dict-pop .d-word{font-weight:800; font-size:15px;}
+  .dict-pop .d-ph{font-size:12px; color:var(--txt2); margin-left:8px;}
+  .dict-pop .d-row{margin-top:7px;}
+  .dict-pop .d-k{color:var(--txt2); font-weight:700; margin-right:5px;}
+  .dict-pop .d-miss{margin-top:6px; color:var(--txt2);}
+  .dict-pop .d-close{position:absolute; top:6px; right:10px; cursor:pointer; color:var(--txt2); font-size:14px;}
+
+  /* 翻译浮层（AI） */
+  .tr-pop{position:absolute; z-index:2300; max-width:290px; background:var(--card); border:1px solid var(--brand); border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.18); padding:12px 14px; font-size:13px; line-height:1.6;}
+  .tr-pop .tr-src{color:var(--txt2); font-size:12px; max-height:60px; overflow:auto; word-break:break-word;}
+  .tr-pop .tr-out{margin-top:7px; font-size:14px; white-space:pre-wrap; word-break:break-word;}
+  .tr-pop .tr-lev{margin-top:6px; font-size:11px; font-weight:700; padding:1px 8px; border-radius:999px; background:#0984E322; color:#0984E3; display:inline-block;}
+  .tr-pop .tr-fallback{margin-top:7px; color:#c0392b; font-weight:600;}
+  .tr-pop .tr-close{position:absolute; top:6px; right:10px; cursor:pointer; color:var(--txt2); font-size:14px;}
+
+  /* 选中工具栏新增按钮 */
+  .pdf-sel-row .b-dict, .pdf-sel-row .b-tr{white-space:nowrap;}
+  @media (max-width: 560px){ .pdf-sel-row{flex-wrap:wrap; max-width:92vw;} }
+
   /* content lab */
   .platform{border:1px solid var(--line); border-radius:14px; overflow:hidden; background:var(--bg2);}
   .platform .head{padding:13px 16px; font-weight:800; font-size:16px; display:flex; align-items:center; gap:9px; color:#fff;}
@@ -887,6 +914,7 @@
     <div class="side-foot">
       <button class="nav-btn" id="accountBtn"><span class="ic">🔐</span> 登录</button>
       <button class="theme-toggle" id="themeBtn">🌙 暗色</button>
+      <button class="nav-btn" id="autoTrBtn" title="选中文字后自动翻译"><span class="ic">🌐</span> 自动翻译 <span class="at-state" id="autoTrState">关</span></button>
       <button class="nav-btn" id="exportBtn"><span class="ic">⬇</span> 导出数据</button>
     </div>
   </aside>
@@ -1500,7 +1528,7 @@
           <div class="cog-screen">
             <div class="dj-topbar">
               <button class="back-btn" data-cog-back>‹ 返回</button>
-              <span class="app-title">🇬🇧 英语表达</span>
+              <span class="app-title">🧠 英语助手</span>
             </div>
             <div class="cog-hint">把中文思考译成四六级英语，积累个人表达资产。</div>
             <div id="cogExprList" style="margin-top:12px;"></div>
@@ -1759,6 +1787,13 @@ const LS = {
   get(k,def){ try{ const v = _canStore? localStorage.getItem(k) : (_mem[k]??null); return v?JSON.parse(v):def; }catch(e){ return def; } },
   set(k,v){ const s=JSON.stringify(v); if(_canStore){ try{ localStorage.setItem(k,s); }catch(e){ _mem[k]=s; } } else { _mem[k]=s; } }
 };
+
+/* 轻量设置对象：随 sync payload.settings 合并；autoTranslate 默认 false（仅本地持久化为主）。 */
+const settings = LS.get("wb_settings", { autoTranslate: false });
+const Settings = {
+  get(k){ return settings[k]; },
+  set(k, v){ settings[k] = v; LS.set("wb_settings", settings); }
+};
 const CATS = ["工作","学习","生活","娱乐","运动","其他"];
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 function fmtDate(d){ const x=new Date(d); return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0"); }
@@ -1777,6 +1812,19 @@ $("#themeBtn").onclick = ()=>{
   applyTheme(cur==="dark"?"light":"dark");
 };
 applyTheme(LS.get("wb_theme","light"));
+
+/* 自动翻译选中文本开关（默认 OFF，仅本地持久化为主，随 sync 合并） */
+function refreshAutoTrUI(){
+  const s = $("#autoTrState");
+  if(s) s.textContent = Settings.get("autoTranslate") ? "开" : "关";
+}
+$("#autoTrBtn").onclick = ()=>{
+  Settings.set("autoTranslate", !Settings.get("autoTranslate"));
+  refreshAutoTrUI();
+  toast(Settings.get("autoTranslate") ? "已开启自动翻译" : "已关闭自动翻译");
+  scheduleSync();
+};
+refreshAutoTrUI();
 
 /* ============ 导航 ============ */
 function goPage(p){
@@ -4078,16 +4126,25 @@ function renderCogHome(){
   if (vab) vab.onclick = () => setCogScreen(2);
 
   // 继续积累：温柔的下一步，而不是冷冰冰的菜单
-  const tiles = [
+  // 首页 hub：常驻「书架 + 英语助手」，其余功能折叠进「更多」（数据不删、屏位不变）
+  const primary = [
+    {k:"book", n:"📚 我的书架", d:"继续你的阅读积累"},
+    {k:"expr", n:"🧠 英语助手", d:"查词 · 翻译 · 四六级表达"},
+  ];
+  const more = [
     {k:"read",   n:"📖 记一次阅读", d:"写下读完后的认知变化"},
-    {k:"book",   n:"📚 加一本书",   d:"建立属于你的书架"},
     {k:"thought",n:"💡 沉淀一个观点", d:"写下你的判断与原则"},
     {k:"review", n:"🗓 写月度复盘", d:"每月回看一次成长"},
     {k:"anno",   n:"💭 我的读书思考", d:"读书中冒出的想法"},
-    {k:"expr",   n:"🇬🇧 英语表达", d:"把思考译成四六级英语"},
   ];
-  $("#cogNavTiles").innerHTML = tiles.map(t=>`<button class="cog-cont" data-cog-go="${t.k}"><div class="cog-cont-n">${t.n}</div><div class="cog-cont-d">${t.d}</div></button>`).join("");
-  $$("#cogNavTiles .cog-cont").forEach(el=> el.onclick=()=> setCogScreen({read:1,book:2,thought:3,review:4,anno:6,expr:7}[el.dataset.cogGo]));
+  const screenMap = {read:1, book:2, thought:3, review:4, anno:6, expr:7};
+  let html = primary.map(t=>`<button class="cog-cont" data-cog-go="${t.k}"><div class="cog-cont-n">${t.n}</div><div class="cog-cont-d">${t.d}</div></button>`).join("");
+  html += `<button class="cog-cont cog-more" id="cogMoreBtn" type="button">⋯ 更多</button>`;
+  html += `<div class="cog-more-list" id="cogMoreList" style="display:none;">${more.map(t=>`<button class="cog-cont cog-more-item" data-cog-go="${t.k}"><div class="cog-cont-n">${t.n}</div><div class="cog-cont-d">${t.d}</div></button>`).join("")}</div>`;
+  $("#cogNavTiles").innerHTML = html;
+  $$("#cogNavTiles [data-cog-go]").forEach(el=> el.onclick=()=> setCogScreen(screenMap[el.dataset.cogGo]));
+  const moreBtn = $("#cogMoreBtn");
+  if(moreBtn) moreBtn.onclick = ()=>{ const l = $("#cogMoreList"); if(l) l.style.display = (l.style.display==="none") ? "block" : "none"; };
 }
 
 /* 书架渲染：复用同一卡片，limit 限制数量，preview=true 时点击进阅读空间 */
@@ -5646,7 +5703,7 @@ function draftFromSelection(bookId){
     rect
   };
 }
-/** 5 按钮选中工具栏：🖍高亮 / 💬评论 / 💡想法 / 📋复制 / ✕ */
+/** 选中工具栏：🖍高亮 / 💬评论 / 💡想法 / 🔍查词 / 🌐翻译 / 📋复制 / ✕ */
 function showSelToolbar(rect, draft){
   removePdfSelBtn();
   const row = document.createElement('div');
@@ -5654,10 +5711,26 @@ function showSelToolbar(rect, draft){
   row.innerHTML = `<button class="b-hl" data-a="hl">🖍 高亮</button>
     <button class="b-cm" data-a="cm">💬 评论</button>
     <button class="b-id" data-a="id">💡 想法</button>
+    <button class="b-dict" data-a="dict">🔍 查词</button>
+    <button class="b-tr" data-a="tr">🌐 翻译</button>
     <button class="b-cp" data-a="cp">📋</button>
     <button class="b-x" data-a="x">✕</button>`;
   document.body.appendChild(row);
   placeFloatAbove(row, rect);
+  // 选词/翻译的浮层锚点：用选中矩形构造稳定锚（工具栏随后被移除，不能直接用 row）
+  const anchor = { getBoundingClientRect: ()=> rect };
+  const onDict = ()=>{
+    removePdfSelBtn();
+    const w = firstSelectedWord(draft.selectedText);
+    if(!w){ toast("未找到可查的英文单词"); return; }
+    DictLoader.ensureLoaded().then(()=>{
+      showDictPop(anchor, DictLoader.lookupWord(w), w);
+    }).catch(()=> toast("词典加载失败，请检查网络后重试"));
+  };
+  const onTranslate = ()=>{
+    removePdfSelBtn();
+    translateSelection(draft.selectedText, anchor);
+  };
   const done = ()=>{ removePdfSelBtn(); const s = window.getSelection(); if(s) s.removeAllRanges(); };
   row.querySelector('[data-a="hl"]').onclick = ()=>{
     const a = addAnno(Object.assign({}, draft, { type:'highlight', color:lastAnnoColor }));
@@ -5665,6 +5738,8 @@ function showSelToolbar(rect, draft){
   };
   row.querySelector('[data-a="cm"]').onclick = ()=>{ removePdfSelBtn(); openAnnoEditor(Object.assign({}, draft, { type:'comment' })); };
   row.querySelector('[data-a="id"]').onclick = ()=>{ removePdfSelBtn(); openAnnoEditor(Object.assign({}, draft, { type:'idea' })); };
+  row.querySelector('[data-a="dict"]').onclick = onDict;
+  row.querySelector('[data-a="tr"]').onclick = onTranslate;
   row.querySelector('[data-a="cp"]').onclick = ()=>{
     const t = draft.selectedText || "";
     if(navigator.clipboard && navigator.clipboard.writeText){
@@ -5690,6 +5765,10 @@ function bindPdfSelection(pagesEl, b){
       const r = draftFromSelection(b.id);
       if(!r) return;
       showSelToolbar(r.rect, r.draft);
+      // 自动翻译：选中即译（仅当开关开启），不弹工具栏打扰
+      if(Settings.get("autoTranslate")){
+        translateSelection(r.draft.selectedText, { getBoundingClientRect: ()=> r.rect });
+      }
     }, 10);
   };
   pagesEl.onmouseup = handle;
@@ -5710,6 +5789,7 @@ function bindPdfSelection(pagesEl, b){
       const t = e.target;
       const inside = (sel)=> !!(t && t.closest && t.closest(sel));
       if(!inside('.pdf-sel-row')) removePdfSelBtn();
+      if(!inside('.dict-pop') && !inside('.tr-pop')){ closeDictPop(); closeTrPop(); }
       if(!inside('.anno-pop') && !inside('span.anno') && !inside('.anno-dot')) closeAnnoPopover();
       if(!inside('.book-menu') && !inside('.book-card')) closeBookMenu();
     };
@@ -5987,6 +6067,187 @@ function showVocab(word, anchor, words){
 }
 function closeVocab(){ const p=document.querySelector(".vocab-pop"); if(p) p.remove(); }
 
+/* ===== 认知资产：本地词典（vendored，离线可用） =====
+ * DictLoader：首次查词懒加载 vendor/ecdict.min.js → window.ECDICT，并缓存到 IndexedDB；
+ *             加载失败只兜底提示，绝不阻塞阅读。
+ * lookupWord：归一化（小写、去标点/数字）后查本地词典。 */
+const _idb = {
+  _db: null,
+  open(){
+    return new Promise((res, rej)=>{
+      if(this._db){ res(this._db); return; }
+      const req = indexedDB.open("wb_cog", 1);
+      req.onupgradeneeded = ()=>{ if(!req.result.objectStoreNames.contains("kv")) req.result.createObjectStore("kv"); };
+      req.onsuccess = ()=>{ this._db = req.result; res(this._db); };
+      req.onerror = ()=> rej(req.error);
+    });
+  },
+  async get(k){
+    const db = await this.open();
+    return new Promise((res, rej)=>{
+      const tx = db.transaction("kv", "readonly");
+      const rq = tx.objectStore("kv").get(k);
+      rq.onsuccess = ()=> res(rq.result);
+      rq.onerror = ()=> rej(rq.error);
+    });
+  },
+  async set(k, v){
+    const db = await this.open();
+    return new Promise((res, rej)=>{
+      const tx = db.transaction("kv", "readwrite");
+      tx.objectStore("kv").put(v, k);
+      tx.oncomplete = ()=> res();
+      tx.onerror = ()=> rej(tx.error);
+    });
+  }
+};
+
+/** 归一化查词键：小写，去标点/数字/空格，保留字母与撇号（don't → dont）。 */
+function normalizeWord(w){
+  const s = (w || "").toLowerCase().trim();
+  const a = s.replace(/[^a-z']/g, "");
+  if(a) return a;
+  return s.replace(/[^a-z]/g, "");
+}
+
+const DictLoader = {
+  _loaded: false,
+  _loading: null,
+  /** 首次查词懒加载词典；优先读 IndexedDB 缓存，否则注入 <script> 并缓存。 */
+  async ensureLoaded(){
+    if(this._loaded) return;
+    if(this._loading) return this._loading;
+    this._loading = (async ()=>{
+      try{
+        const cached = await _idb.get("ecdict");
+        if(cached && typeof cached === "object"){ window.ECDICT = cached; this._loaded = true; return true; }
+      }catch(e){ /* IndexedDB 不可用则退化到网络加载 */ }
+      if(window.ECDICT){ this._loaded = true; return true; }
+      const ok = await new Promise((res)=>{
+        const s = document.createElement("script");
+        s.src = "vendor/ecdict.min.js";
+        s.onload = ()=> res(true);
+        s.onerror = ()=> res(false);
+        document.head.appendChild(s);
+      });
+      if(window.ECDICT){
+        this._loaded = true;
+        try{ await _idb.set("ecdict", window.ECDICT); }catch(e){ /* 缓存失败不致命 */ }
+        return true;
+      }
+      return ok;
+    })();
+    const ok = await this._loading;
+    this._loading = null;
+    if(!ok && !window.ECDICT) throw new Error("dict_load_failed");
+    return ok;
+  },
+  /** 查词：返回 {word,phonetic,pos,meaning} 或 null（未收录）。 */
+  lookupWord(word){
+    if(!word || !window.ECDICT) return null;
+    const k = normalizeWord(word);
+    if(!k) return null;
+    const e = window.ECDICT[k];
+    if(!e) return null;
+    return { word: k, phonetic: (e.phonetic || ""), pos: (e.pos || ""), meaning: (e.meaning || "") };
+  }
+};
+
+/* 取选区里第一个英文单词（用于查词锚定）。 */
+function firstSelectedWord(text){
+  if(!text) return "";
+  const m = (text.trim().match(/[A-Za-z][A-Za-z'’\-]*/) || [""])[0];
+  return m || "";
+}
+
+/* 翻译降级文案：reason → 中文提示 */
+const TR_FALLBACK_MSG = {
+  rate_limited: "请求过于频繁，请稍后再试",
+  llm_not_configured: "翻译服务未配置（服务端未设置 LLM_API_KEY）",
+  upstream_error: "翻译服务暂时出错，请稍后重试",
+  timeout: "翻译超时，请稍后重试",
+  parse_failed: "翻译结果解析失败，请稍后重试",
+  bad_request: "没有可翻译的内容"
+};
+
+/* ---- 翻译服务：POST /api/ai/ask {task:'translate'}（Cloudflare Functions，复用 express 通道的 LLM 基建） ---- */
+const TranslateService = {
+  async callTranslate(text, level){
+    level = level || "cet4/6";
+    const body = { task: "translate", text: (text || "").slice(0, 2000), level };
+    try{
+      const r = await fetch("/api/ai/ask", {
+        method: "POST",
+        headers: apiHeaders(),
+        body: JSON.stringify(body)
+      });
+      if(r.status === 401) return { ok: false, fallback: true, reason: "upstream_error" };
+      if(r.status === 429) return { ok: false, fallback: true, reason: "rate_limited" };
+      const j = await r.json().catch(()=>({}));
+      if(r.ok && j.ok){
+        return { ok: true, translation: (j.translation || ""), level: (j.level || level) };
+      }
+      return { ok: false, fallback: true, reason: (j.reason || "upstream_error") };
+    }catch(e){
+      return { ok: false, fallback: true, reason: "upstream_error" };
+    }
+  }
+};
+
+/** 选中文本 → 翻译浮层（anchor 为稳定锚，可用 rect 构造的对象）。 */
+async function translateSelection(text, anchor){
+  if(!text || !text.trim()) return;
+  const res = await TranslateService.callTranslate(text.trim(), "cet4/6");
+  showTrPop(anchor, res, text.trim());
+}
+
+/** 翻译结果浮层（成功译文 / 失败降级提示）。 */
+function showTrPop(anchor, res, src){
+  closeTrPop();
+  const pop = document.createElement("div");
+  pop.className = "tr-pop";
+  let body;
+  if(res && res.ok){
+    body = `<div class="tr-src">${esc(src)}</div>`
+         + `<div class="tr-out">${esc(res.translation || "")}</div>`
+         + `<div class="tr-lev">${esc(res.level || "")}</div>`;
+  } else {
+    const reason = (res && res.reason) || "unknown";
+    const msg = TR_FALLBACK_MSG[reason] || "翻译暂不可用，请稍后重试";
+    body = `<div class="tr-src">${esc(src)}</div>`
+         + `<div class="tr-fallback">⚠️ ${esc(msg)}</div>`;
+  }
+  pop.innerHTML = `<span class="tr-close" onclick="closeTrPop()">×</span>` + body;
+  document.body.appendChild(pop);
+  const r = (anchor && anchor.getBoundingClientRect) ? anchor.getBoundingClientRect() : { left: 80, bottom: 80, top: 80 };
+  pop.style.top = Math.min(window.innerHeight - 180, r.bottom + 8) + "px";
+  pop.style.left = Math.max(8, Math.min(window.innerWidth - 300, r.left)) + "px";
+}
+function closeTrPop(){ const p = document.querySelector(".tr-pop"); if(p) p.remove(); }
+
+/** 本地查词浮层（命中 / 未命中）。 */
+function showDictPop(anchor, entry, word){
+  closeDictPop();
+  const pop = document.createElement("div");
+  pop.className = "dict-pop";
+  let body;
+  if(!entry){
+    body = `<div class="d-word">${esc(word || "")}</div>`
+         + `<div class="d-miss">本地词典未收录该词</div>`;
+  } else {
+    body = `<div><span class="d-word">${esc(entry.word)}</span>`
+         + `<span class="d-ph">${esc(entry.phonetic || "")}</span></div>`
+         + `<div class="d-row"><span class="d-k">词性</span>${esc(entry.pos || "")}</div>`
+         + `<div class="d-row"><span class="d-k">释义</span>${esc(entry.meaning || "")}</div>`;
+  }
+  pop.innerHTML = `<span class="d-close" onclick="closeDictPop()">×</span>` + body;
+  document.body.appendChild(pop);
+  const r = (anchor && anchor.getBoundingClientRect) ? anchor.getBoundingClientRect() : { left: 80, bottom: 80, top: 80 };
+  pop.style.top = Math.min(window.innerHeight - 180, r.bottom + 8) + "px";
+  pop.style.left = Math.max(8, Math.min(window.innerWidth - 280, r.left)) + "px";
+}
+function closeDictPop(){ const p = document.querySelector(".dict-pop"); if(p) p.remove(); }
+
 /* ---- AI 调用（兼容 OpenAI，默认 DeepSeek） ---- */
 async function callAI(task, text, level){
   if(!apiToken){ toast("请先登录"); return null; }
@@ -6020,7 +6281,7 @@ $("#cogAnnoSave").onclick = saveCogAnno;
 $("#cogAnnoCancel").onclick = closeCogAnno;
 $("#cogAnnoDelete").onclick = delCogAnno;
 $("#cogAnnoModal").addEventListener("click", e=>{ if(e.target.id==="cogAnnoModal") closeCogAnno(); });
-document.addEventListener("click", e=>{ if(!e.target.closest(".vocab-pop") && !e.target.closest(".e-word")) closeVocab(); });
+document.addEventListener("click", e=>{ const t=e.target; if(!t.closest(".vocab-pop") && !t.closest(".e-word")) closeVocab(); if(!t.closest(".dict-pop")) closeDictPop(); if(!t.closest(".tr-pop")) closeTrPop(); });
 
 /* ============ 导出 ============ */
 $("#exportBtn").onclick = ()=>{
@@ -6101,6 +6362,11 @@ async function pullSync(){
       directions = mergeRecords(directions, j.payload.directions||[]).map(normDir);
       reviews = mergeRecords(reviews, j.payload.reviews||[]).map(normReview);
       if(j.payload.settings && j.payload.settings.theme) applyTheme(j.payload.settings.theme);
+      // 设置合并：autoTranslate 仅在远端显式为布尔时采用（服务端合并会丢弃 falsy，OFF 不跨端覆盖）
+      if(j.payload.settings && typeof j.payload.settings.autoTranslate === "boolean"){
+        Settings.set("autoTranslate", j.payload.settings.autoTranslate);
+        refreshAutoTrUI();
+      }
       migrateHighlightsToAnnos();   // 云端可能推下来其他端的旧高亮记录，同样走一次迁移（确定性 id，幂等）
       persistTimes(); persistIdeas(); persistNotes(); persistDiary(); persistCog(); persistDirections(); persistReviews();   // 仅本地落盘，不触发回传，避免同步风暴
     }
@@ -6111,7 +6377,10 @@ async function pullSync(){
 }
 async function pushSync(){
   if(!apiToken) return null;
-  const payload = { times, ideas, notes, diary, cog_reads:cogReads, cog_books:cogBooks, cog_thoughts:cogThoughts, cog_reviews:cogReviews, cog_expr:cogExpr, cog_annos:cogAnnos, directions, reviews, settings:{ theme: document.documentElement.getAttribute("data-theme")||"light" } };
+  // 抽成独立变量，避免 payload 行内出现嵌套对象字面量，
+  // 否则静态解析（按首个 } 截断）会把 settings 内的 theme/autoTranslate 误判为顶层键。
+  const _syncSettings = { theme: document.documentElement.getAttribute("data-theme")||"light", autoTranslate: !!Settings.get("autoTranslate") };
+  const payload = { times, ideas, notes, diary, cog_reads:cogReads, cog_books:cogBooks, cog_thoughts:cogThoughts, cog_reviews:cogReviews, cog_expr:cogExpr, cog_annos:cogAnnos, directions, reviews, settings: _syncSettings };
   try{
     const r = await fetch("/api/sync/push", {method:"POST", headers:apiHeaders(), body:JSON.stringify({payload})});
     const j = await r.json().catch(()=>({}));

@@ -1,45 +1,46 @@
 classDiagram
-    class Note {
-        +string id
-        +string dir
-        +string title
-        +string body
-        +bool done
-        +bool focus
-        +bool deleted
-        +string startDate
-        +string endDate
-        +string[] completions
-        +normalizeNote(note) Note
-        +isInFocusToday(note, today) bool
-        +toggleCompletion(note, date) Note
+    class DictLoader {
+        +ECDICT: object
+        +ensureLoaded() Promise~void~
+        +lookupWord(word) DictEntry
     }
-    class Direction {
-        +string id
-        +string title
-        +string emoji
-        +string cat
-        +bool deleted
+    class SelectionToolbar {
+        +showSelToolbar(rect, draft) void
+        +bindPdfSelection(pagesEl, b) void
+        +onDict() void
+        +onTranslate() void
     }
-    class CompletionIndex {
-        +getCompletionMap(notes) Map~string,Note[]
-        +getCompletionsByDate(notes, date) Note[]
+    class TranslateService {
+        +callTranslate(text, level) Promise~TrResult~
+        -showTrPop(anchor, res) void
     }
-    class FocusBar {
-        +renderActFocus(notes, today) string
+    class Settings {
+        +get(key) any
+        +set(key, val) void
+        +autoTranslate: bool
     }
-    class MatrixRenderer {
-        +renderMatrix(directions, notes) string
-        +matrixRowHtml(direction, notes) string
+    class CogHome {
+        +renderCogHome() void
     }
-    class TodoCalendar {
-        +renderTodoCalendar(notes) string
-        +renderDayCompletions(date, notes) string
+    class Handler {
+        +do_POST() void
+        +api_ai_translate(body) void
     }
-    Direction "1" --> "0..*" Note : dir FK
-    Note ..> Note : toggleCompletion 返回新
-    CompletionIndex ..> Note : 聚合 completions
-    FocusBar ..> Note : isInFocusToday 过滤
-    MatrixRenderer ..> Note : 读取分组
-    MatrixRenderer ..> Direction : 读取
-    TodoCalendar ..> CompletionIndex : getCompletionMap
+    class RateLimiter {
+        +allow(key) (bool, int)
+    }
+    class LLM {
+        <<reused from server.py>>
+        +llm_chat(base, key, model, messages, timeout) string
+        +LLM_OPENER: opener
+        +LLM_API_KEY: string
+        +LLM_MODEL: string
+    }
+    SelectionToolbar ..> DictLoader : 查词(本地)
+    SelectionToolbar ..> TranslateService : 翻译(AI)
+    SelectionToolbar ..> Settings : 读 autoTranslate
+    CogHome ..> Settings : 读写开关
+    CogHome ..> SelectionToolbar : 英语助手入口
+    TranslateService ..> Handler : POST /api/ai/translate
+    Handler ..> RateLimiter : 限流
+    Handler ..> LLM : llm_chat

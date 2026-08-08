@@ -26,6 +26,50 @@ export const onRequestPost: PagesFunction<Env> = guard(async ({ request, env }) 
   const level = bodyStr(body, 'level') || 'cet4';
 
   if (!text) return errorResponse(400, 'empty text');
+
+  // 翻译分支：选中文本 → 中文/英文互译（四六级水准）。express 分支见下方，保留不动。
+  if (task === 'translate') {
+    const apiKey = env.DEEPSEEK_API_KEY || env.AI_API_KEY || '';
+    const base = env.AI_API_BASE || 'https://api.deepseek.com/v1';
+    const model = env.AI_MODEL || 'deepseek-chat';
+    if (!apiKey) return jsonResponse(200, { ok: false, reason: 'llm_not_configured' });
+
+    // 方向：含 CJK 视为中文→英文，否则英文→中文；level 仅影响英文输出水准（cet4/6）
+    const hasCJK = /[一-鿿]/.test(text);
+    const dir = hasCJK ? 'zh2en' : 'en2zh';
+    const isCet6 = level === 'cet6';
+    const lvlName = isCet6 ? 'CET-6（大学英语六级）' : 'CET-4（大学英语四级）';
+    let sys: string, user: string;
+    if (dir === 'zh2en') {
+      sys = `你是一个帮助中国学生把中文翻译成英语的助手，水平控制在${lvlName}。要求：使用简单、自然、地道的英语，不要学术化、不要复杂长难句、不要生僻词。只输出译文本身，不要解释、不要代码块、不要任何多余文字。`;
+      user = `中文：${text}\n请把上面的中文翻译成${isCet6 ? '六级' : '四级'}水平的英语。`;
+    } else {
+      sys = `你是英语助学翻译。把用户选中的英文文本译成简洁通顺的中文，用词控制在${lvlName}水准，不要堆砌生僻词、不要逐字硬译、不要增译。只输出译文本身，不要解释、不要代码块、不要任何多余文字。`;
+      user = `英文：${text}\n请把上面的英文译成简洁通顺的中文。`;
+    }
+    try {
+      const r = await fetch(base + '/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: 'system', content: sys }, { role: 'user', content: user }],
+          temperature: 0.3,
+        }),
+      });
+      if (!r.ok) {
+        const t = await r.text().catch(() => '');
+        return jsonResponse(200, { ok: false, reason: 'upstream_error', detail: 'http_' + r.status, raw: t.slice(0, 300) });
+      }
+      const j = await r.json() as any;
+      const translation = (j?.choices?.[0]?.message?.content || '').trim();
+      if (!translation) return jsonResponse(200, { ok: false, reason: 'parse_failed' });
+      return jsonResponse(200, { ok: true, translation, level, dir });
+    } catch (e) {
+      return jsonResponse(200, { ok: false, reason: 'upstream_error' });
+    }
+  }
+
   if (task !== 'express') return errorResponse(400, 'unsupported task');
 
   const apiKey = env.DEEPSEEK_API_KEY || env.AI_API_KEY || '';
