@@ -11,6 +11,9 @@ wb.env
 backups/
 data/
 
+# 完整 ECDICT CSV（~50MB，太大不入库；仅提交分片产物 scripts/gen-ecdict-shards.mjs 产出的 vendor/ecdict/*.js）
+ecdict_full.csv
+
 # 构建产物
 build*/
 dist*/

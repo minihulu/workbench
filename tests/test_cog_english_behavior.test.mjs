@@ -208,6 +208,14 @@ function buildSandbox() {
     .replace('windowObjRef', 'window');
   vm.runInContext(code, sandbox, { filename: 'cog-extracted.js' });
 
+  // 捕获 makeEl 原始 appendChild；_autoHeadAppend 走闭包调用它，避免被 before 钩子重写后自递归
+  const _origHeadAppend = head.appendChild;
+  const _autoHeadAppend = (s) => {
+    const r = _origHeadAppend(s);
+    if (s && typeof s.onload === 'function') s.onload();
+    return r;
+  };
+
   return {
     api: sandbox.__api,
     sandbox,
@@ -216,6 +224,8 @@ function buildSandbox() {
     head,
     body,
     idbStore,
+    _origHeadAppend,
+    _autoHeadAppend,
     setFetchMock: (fn) => sandbox.__setFetchMock(fn),
     setApiToken: (t) => sandbox.__setApiToken(t),
   };
@@ -268,33 +278,37 @@ describe('firstSelectedWord 选区首词', () => {
 
 /* ────────────────────────── DictLoader.lookupWord ────────────────────────── */
 describe('DictLoader.lookupWord 查词', () => {
-  before(() => { SB.window.ECDICT = FIXTURE_ECDICT; });
+  before(() => {
+    SB.window.ECDICT = FIXTURE_ECDICT;
+    // lookupWord 现已异步：先 ensureShard 注入对应首字母分片，再查 window.ECDICT
+    SB.document.head.appendChild = SB._autoHeadAppend;
+  });
 
-  test('命中返回 {word,phonetic,pos,meaning}', () => {
-    const e = SB.api.DictLoader.lookupWord('Hello!');
+  test('命中返回 {word,phonetic,pos,meaning}', async () => {
+    const e = await SB.api.DictLoader.lookupWord('Hello!');
     assert.ok(e, '应命中 hello');
     assert.equal(e.word, 'hello');
     assert.equal(e.phonetic, 'həˈləʊ');
     assert.equal(e.pos, 'int.');
     assert.equal(e.meaning, '你好；喂');
   });
-  test('撇号与大小写归一化命中', () => {
-    const e = SB.api.DictLoader.lookupWord("DON'T");
+  test('撇号与大小写归一化命中', async () => {
+    const e = await SB.api.DictLoader.lookupWord("DON'T");
     assert.equal(e.word, 'dont');
     assert.equal(e.meaning, '不要；不做');
   });
-  test('未收录词返回 null', () => {
-    assert.equal(SB.api.DictLoader.lookupWord('zzzzz'), null);
+  test('未收录词返回 null', async () => {
+    assert.equal(await SB.api.DictLoader.lookupWord('zzzzz'), null);
   });
-  test('无词典（window.ECDICT 未加载）返回 null', () => {
+  test('无词典（window.ECDICT 未加载）返回 null', async () => {
     const saved = SB.window.ECDICT;
     SB.window.ECDICT = undefined;
-    assert.equal(SB.api.DictLoader.lookupWord('hello'), null);
+    assert.equal(await SB.api.DictLoader.lookupWord('hello'), null);
     SB.window.ECDICT = saved;
   });
-  test('空/纯标点输入返回 null', () => {
-    assert.equal(SB.api.DictLoader.lookupWord(''), null);
-    assert.equal(SB.api.DictLoader.lookupWord('!!!'), null);
+  test('空/纯标点输入返回 null', async () => {
+    assert.equal(await SB.api.DictLoader.lookupWord(''), null);
+    assert.equal(await SB.api.DictLoader.lookupWord('!!!'), null);
   });
 });
 
@@ -306,6 +320,8 @@ describe('DictLoader.ensureLoaded 懒加载', () => {
     SB.api.DictLoader._loading = null;
     SB.idbStore.clear();
     SB.window.ECDICT = undefined;
+    // ensureLoaded 用例自行控制 <script> 加载时机，使用不自动触发 onload 的原始 appendChild
+    SB.document.head.appendChild = SB._origHeadAppend;
   });
   test('IndexedDB 缓存命中：直接采用缓存并标记已加载', async () => {
     SB.idbStore.set('ecdict', FIXTURE_ECDICT);
@@ -466,9 +482,15 @@ describe('showDictPop 查词浮层', () => {
   function lastPop() { return SB.document.body.children[SB.document.body.children.length - 1]; }
   const anchor = { getBoundingClientRect: () => ({ left: 10, bottom: 20, top: 20, width: 0, height: 0 }) };
 
-  test('命中：渲染音标/词性/释义', () => {
+  before(() => {
+    // showDictPop 命中用例需走异步 lookupWord，分片加载需自动触发 onload
+    SB.document.head.appendChild = SB._autoHeadAppend;
+  });
+
+  test('命中：渲染音标/词性/释义', async () => {
     SB.window.ECDICT = FIXTURE_ECDICT;
-    SB.api.showDictPop(anchor, SB.api.DictLoader.lookupWord('hello'), 'hello');
+    const entry = await SB.api.DictLoader.lookupWord('hello');
+    SB.api.showDictPop(anchor, entry, 'hello');
     const pop = lastPop();
     assert.ok(pop.className.includes('dict-pop'));
     assert.ok(pop.innerHTML.includes('hello'));

@@ -5729,13 +5729,17 @@ function showSelToolbar(rect, draft){
   placeFloatAbove(row, rect);
   // 选词/翻译的浮层锚点：用选中矩形构造稳定锚（工具栏随后被移除，不能直接用 row）
   const anchor = { getBoundingClientRect: ()=> rect };
-  const onDict = ()=>{
+  const onDict = async ()=>{
     removePdfSelBtn();
     const w = firstSelectedWord(draft.selectedText);
     if(!w){ toast("未找到可查的英文单词"); return; }
-    DictLoader.ensureLoaded().then(()=>{
-      showDictPop(anchor, DictLoader.lookupWord(w), w);
-    }).catch(()=> toast("词典加载失败，请检查网络后重试"));
+    try{
+      await DictLoader.ensureLoaded();
+      const d = await DictLoader.lookupWord(w);
+      showDictPop(anchor, d, w);
+    }catch(e){
+      toast("词典加载失败，请检查网络后重试");
+    }
   };
   const onTranslate = ()=>{
     removePdfSelBtn();
@@ -6128,6 +6132,35 @@ function normalizeWord(w){
   return (w || "").toLowerCase().trim().replace(/[^a-z]/g, "");
 }
 
+/* ===ECDICT_SHARD_HELPERS_START=== */
+/** 已加载的分片首字母集合（随页面生命周期驻留，避免重复注入同字母分片）。 */
+const loadedShards = new Set();
+
+/** 分片键：取 word 中第一个英文字母（小写）；整词无字母归 '#'。 */
+function ecdictShardKey(w){
+  const m = (w || "").toLowerCase().match(/[a-z]/);
+  return m ? m[0] : "#";
+}
+
+/**
+ * 懒加载某个首字母分片：vendor/ecdict/<letter>.js（'#' 对应 _.js）。
+ * 已加载直接 resolve；网络失败抛错（'#' 分片可能不存在，静默放行，不阻断查词）。
+ */
+function ensureShard(letter){
+  return new Promise((resolve, reject)=>{
+    if(loadedShards.has(letter)) return resolve();
+    const s = document.createElement("script");
+    s.src = "vendor/ecdict/" + (letter === "#" ? "_" : letter) + ".js";
+    s.onload = ()=>{ loadedShards.add(letter); resolve(); };
+    s.onerror = (e)=>{
+      if(letter === "#"){ loadedShards.add(letter); return resolve(); }
+      reject(e instanceof Error ? e : new Error("shard_load_failed:" + letter));
+    };
+    document.head.appendChild(s);
+  });
+}
+/* ===ECDICT_SHARD_HELPERS_END=== */
+
 const DictLoader = {
   _loaded: false,
   _loading: null,
@@ -6160,11 +6193,14 @@ const DictLoader = {
     if(!ok && !window.ECDICT) throw new Error("dict_load_failed");
     return ok;
   },
-  /** 查词：返回 {word,phonetic,pos,meaning} 或 null（未收录）。 */
-  lookupWord(word){
-    if(!word || !window.ECDICT) return null;
+  /** 查词（异步）：先确保对应首字母分片已注入，再查 window.ECDICT；返回 {word,phonetic,pos,meaning} 或 null（未收录）。 */
+  async lookupWord(word){
+    if(!word) return null;
     const k = normalizeWord(word);
     if(!k) return null;
+    // 首次触发该字母分片的网络加载，之后命中内存中的 loadedShards
+    await ensureShard(ecdictShardKey(k));
+    if(!window.ECDICT) return null;
     const e = window.ECDICT[k];
     if(!e) return null;
     return { word: k, phonetic: (e.phonetic || ""), pos: (e.pos || ""), meaning: (e.meaning || "") };
