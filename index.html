@@ -53,6 +53,18 @@
   .sub{color:var(--txt2); margin:0 0 22px; font-size:14px;}
   .card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow);}
   .card + .card{margin-top:18px;}
+
+  /* 编辑任务弹窗：字段分组折叠（方案 A） */
+  .grp{margin-top:14px; border:1px solid var(--line); border-radius:14px; background:var(--bg2); overflow:hidden;}
+  .grp:first-of-type{margin-top:0;}
+  .grp-title{display:flex; align-items:center; gap:9px; padding:12px 14px; cursor:pointer; user-select:none; font-weight:700; color:var(--txt); font-size:14px; transition:background .12s;}
+  .grp-title:hover{background:var(--chip);}
+  .grp-ico{font-size:15px; line-height:1; flex:none;}
+  .grp-label{flex:1; min-width:0;}
+  .grp-arrow{font-size:12px; line-height:1; color:var(--txt2); transition:transform .18s ease; flex:none;}
+  .grp.collapsed .grp-arrow{transform:rotate(-90deg);}
+  .grp-body{padding:12px 14px 6px;}
+  .grp.collapsed .grp-body{display:none;}
   .card h2{margin:0 0 14px; font-size:17px; display:flex; align-items:center; gap:8px;}
 
   /* 方案A：今日时间占比（圆环卡片 + 分类列表） */
@@ -1170,60 +1182,91 @@
               <button class="chk-lg" id="noteDoneToggle" title="标记完成">○</button>
             </div>
             <div class="card">
-              <label class="fld">任务名称</label>
-              <input id="noteETitle" placeholder="要推进哪件重要的事？">
 
-              <label class="fld" style="margin-top:12px;">备注（可选）</label>
-              <textarea id="noteEBody" rows="3" placeholder="关键细节、链接、想法…"></textarea>
+              <!-- 核心组：默认展开 -->
+              <div class="grp" data-grp="core">
+                <div class="grp-title" data-toggle="core">
+                  <span class="grp-ico">📌</span>
+                  <span class="grp-label">核心信息</span>
+                  <span class="grp-arrow">▾</span>
+                </div>
+                <div class="grp-body">
+                  <label class="fld">任务名称</label>
+                  <input id="noteETitle" placeholder="要推进哪件重要的事？">
 
-              <label class="fld" style="margin-top:12px;">所属大目标</label>
-              <select id="noteEDir" class="sel"></select>
+                  <label class="fld" style="margin-top:12px;">备注（可选）</label>
+                  <textarea id="noteEBody" rows="3" placeholder="关键细节、链接、想法…"></textarea>
 
-              <label class="fld" style="margin-top:12px;">分类</label>
-              <select id="noteECat" class="sel">
-                <option>医学</option><option>创业</option><option>金融</option><option>个人</option>
-              </select>
+                  <label class="fld" style="margin-top:12px;">所属大目标</label>
+                  <select id="noteEDir" class="sel"></select>
 
-              <label class="fld" style="margin-top:12px;">轻重缓急</label>
-              <div id="noteEPrio" class="dj-mood">
-                <button data-prio="high">🔴 必须完成</button>
-                <button data-prio="mid">🟡 重要推进</button>
-                <button data-prio="low">🟢 可选事项</button>
+                  <label class="fld" style="margin-top:12px;">轻重缓急</label>
+                  <div id="noteEPrio" class="dj-mood">
+                    <button data-prio="high">🔴 必须完成</button>
+                    <button data-prio="mid">🟡 重要推进</button>
+                    <button data-prio="low">🟢 可选事项</button>
+                  </div>
+                </div>
               </div>
 
-              <label class="fld" style="margin-top:12px;">预计时间</label>
-              <select id="noteEEta" class="sel">
-                <option value="">不限</option>
-                <option value="30">30 分钟</option>
-                <option value="60">1 小时</option>
-                <option value="180">3 小时</option>
-              </select>
+              <!-- 计划组：默认展开 -->
+              <div class="grp" data-grp="plan">
+                <div class="grp-title" data-toggle="plan">
+                  <span class="grp-ico">🗓️</span>
+                  <span class="grp-label">计划安排</span>
+                  <span class="grp-arrow">▾</span>
+                </div>
+                <div class="grp-body">
+                  <label class="fld">预计时间</label>
+                  <select id="noteEEta" class="sel">
+                    <option value="">不限</option>
+                    <option value="30">30 分钟</option>
+                    <option value="60">1 小时</option>
+                    <option value="180">3 小时</option>
+                  </select>
 
-              <label class="fld" style="margin-top:12px;">状态</label>
-              <select id="noteEStatus" class="sel">
-                <option value="todo">未开始</option>
-                <option value="doing">进行中</option>
-                <option value="done">已完成</option>
-              </select>
+                  <label class="fld" style="margin-top:12px;">状态</label>
+                  <select id="noteEStatus" class="sel">
+                    <option value="todo">未开始</option>
+                    <option value="doing">进行中</option>
+                    <option value="done">已完成</option>
+                  </select>
 
-              <label class="fld" style="margin-top:14px;display:flex;align-items:center;gap:8px;cursor:pointer;">
-                <input type="checkbox" id="noteEFocus"> 设为「今日聚焦」
-              </label>
-
-              <label class="fld" style="margin-top:12px;">截止日期（可选）</label>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-                <input type="date" id="noteEDue" style="padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg2);color:var(--txt);font:inherit;">
-                <button class="btn ghost sm" data-quickdue="today">今天</button>
-                <button class="btn ghost sm" data-quickdue="tomorrow">明天</button>
-                <button class="btn ghost sm" data-quickdue="week">本周日</button>
-                <button class="btn ghost sm" data-quickdue="">清除</button>
+                  <label class="fld" style="margin-top:12px;">截止日期（可选）</label>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                    <input type="date" id="noteEDue" style="padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg2);color:var(--txt);font:inherit;">
+                    <button class="btn ghost sm" data-quickdue="today">今天</button>
+                    <button class="btn ghost sm" data-quickdue="tomorrow">明天</button>
+                    <button class="btn ghost sm" data-quickdue="week">本周日</button>
+                    <button class="btn ghost sm" data-quickdue="">清除</button>
+                  </div>
+                </div>
               </div>
 
-              <label class="fld" style="margin-top:14px;">时间线（起止日期，可选 · 进入今日聚焦）</label>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-                <input type="date" id="noteEStart" style="padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg2);color:var(--txt);font:inherit;" title="开始日期">
-                <span style="color:var(--txt2);">→</span>
-                <input type="date" id="noteEEnd" style="padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg2);color:var(--txt);font:inherit;" title="结束日期">
+              <!-- 高级组：默认折叠收起 -->
+              <div class="grp collapsed" data-grp="adv">
+                <div class="grp-title" data-toggle="adv">
+                  <span class="grp-ico">⚙️</span>
+                  <span class="grp-label">高级</span>
+                  <span class="grp-arrow">▾</span>
+                </div>
+                <div class="grp-body">
+                  <label class="fld">分类</label>
+                  <select id="noteECat" class="sel">
+                    <option>医学</option><option>创业</option><option>金融</option><option>个人</option>
+                  </select>
+
+                  <label class="fld" style="margin-top:14px;display:flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input type="checkbox" id="noteEFocus"> 设为「今日聚焦」
+                  </label>
+
+                  <label class="fld" style="margin-top:14px;">时间线（跨天任务自动进入聚焦）</label>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                    <input type="date" id="noteEStart" style="padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg2);color:var(--txt);font:inherit;" title="开始日期">
+                    <span style="color:var(--txt2);">→</span>
+                    <input type="date" id="noteEEnd" style="padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg2);color:var(--txt);font:inherit;" title="结束日期">
+                  </div>
+                </div>
               </div>
 
               <div style="display:flex;gap:10px;margin-top:18px;justify-content:space-between;align-items:center;">
@@ -2987,6 +3030,14 @@ function quickDue(k){
   $("#noteEDue").value = fmtDate(d);
 }
 
+/* 编辑任务弹窗：分组折叠（方案 A） */
+function toggleGrp(name){
+  const g = document.querySelector('.grp[data-grp="'+name+'"]');
+  if(!g) return;
+  g.classList.toggle("collapsed");
+}
+/* grp-toggle-end */
+
 /* ---- 目标（Goal）增删改 ---- */
 let editingGoalId=null;
 function openGoalEdit(id){
@@ -3084,6 +3135,7 @@ $("#noteDelete").onclick=deleteNoteEdit;
 $("#noteDoneToggle").onclick=()=> setNoteDone(!noteDone);
 $$("#noteEPrio button").forEach(b=> b.onclick=()=> setNotePrio(b.dataset.prio));
 $$("[data-quickdue]").forEach(b=> b.onclick=()=> quickDue(b.dataset.quickdue));
+$$(".grp-title").forEach(t=> t.onclick=()=> toggleGrp(t.dataset.toggle));
 $("#noteEStatus").onchange=()=>{ if($("#noteEStatus").value==="done") setNoteDone(true); else setNoteDone(false); };
 $("#noteEDir").onchange=()=>{ const d=directions.find(x=>x.id===$("#noteEDir").value); if(d) $("#noteECat").value=d.cat; };
 /* 「全部任务」按钮：打开任务列表弹窗（与矩阵/日历解耦，复用既有 openTaskList） */
