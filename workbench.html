@@ -6102,10 +6102,10 @@ const _idb = {
   }
 };
 
-/** 归一化查词键：小写，去标点/数字/空格，保留字母与撇号（don't → dont）。 */
+/** 归一化查词键：小写，去标点/数字/空格/撇号，保留纯字母（don't → dont，与 vendor/ecdict 纯字母键一致）。 */
 function normalizeWord(w){
   const s = (w || "").toLowerCase().trim();
-  const a = s.replace(/[^a-z']/g, "");
+  const a = s.replace(/[^a-z]/g, "");
   if(a) return a;
   return s.replace(/[^a-z]/g, "");
 }
