@@ -197,6 +197,35 @@ describe('1. matrixRowHtml：真实方向行含编辑/删除按钮，虚拟未�
   });
 });
 
+/* ══════════════════════════ 1b. 方向标题可见（name 为主、title 兜底；按钮不挤占标题宽度） ══════════════════════════ */
+
+describe('1b. matrixRowHtml：方向标题必须可见（name/title 兜底 + 布局不压扁）', () => {
+  test('N1 标题含 name 字段内容（真实方向行应呈现「医学成长」等名称）', () => {
+    const env = makeSandbox();
+    const html = env.api.get('matrixRowHtml({id:"g1",name:"医学成长",emoji:"🩺"}, [])');
+    assert.ok(html.includes('医学成长'), '方向名称应出现在 matrix-name 中');
+    assert.ok(/<span class="matrix-name">[\s\S]*医学成长/.test(html), 'matrix-name 须承载方向标题');
+  });
+
+  test('N2 title 兜底：仅有 title 字段（无 name）时仍渲染标题（兼容数据模型差异）', () => {
+    const env = makeSandbox();
+    const html = env.api.get('matrixRowHtml({id:"g2",title:"创业产品",emoji:"🚀"}, [])');
+    assert.ok(html.includes('创业产品'), '仅有 title 时也应渲染标题');
+  });
+
+  test('N3 源码层：matrixRowHtml 用 g.name 优先、g.title 兜底（esc 包裹，不新增同步键）', () => {
+    const src = sliceBetween(HTML, 'function matrixRowHtml(g, notesInDir){', 'function renderMatrix(){', 'matrixRowHtml');
+    assert.ok(/esc\(\s*g\.name\s*!=\s*null\s*\?\s*g\.name\s*:\s*g\.title\s*\)/.test(src),
+      'matrixRowHtml 须以 g.name 为主、g.title 兜底渲染标题（兼容 name/title 两种数据模型）');
+  });
+
+  test('N4 布局兜底：count 预留按钮槽位（margin-right:64px），编辑/删除按钮绝对定位脱离 flex 流，避免标题被压成 0 宽', () => {
+    assert.ok(/\.matrix-count\{[^}]*margin-right:64px/.test(HTML), 'matrix-count 须预留 64px 右侧槽位给操作按钮');
+    assert.ok(/\.matrix-row-head \.matrix-dir-edit,[\s\S]*\.matrix-row-head \.matrix-dir-del\{[^}]*position:absolute/.test(HTML),
+      '编辑/删除按钮须绝对定位（脱离 flex 流），不挤占标题宽度');
+  });
+});
+
 /* ══════════════════════════ 2. 顶部「＋ 新大任务」按钮（静态校验） ══════════════════════════ */
 
 describe('2. 矩阵标题新增「＋ 新大任务」入口（#matrixAddDir）', () => {
