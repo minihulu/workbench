@@ -204,7 +204,7 @@ describe('1b. matrixRowHtml：方向标题必须可见（name/title 兜底 + 布
     const env = makeSandbox();
     const html = env.api.get('matrixRowHtml({id:"g1",name:"医学成长",emoji:"🩺"}, [])');
     assert.ok(html.includes('医学成长'), '方向名称应出现在 matrix-name 中');
-    assert.ok(/<span class="matrix-name">[\s\S]*医学成长/.test(html), 'matrix-name 须承载方向标题');
+    assert.ok(/<span class="matrix-name"[^>]*>[\s\S]*医学成长/.test(html), 'matrix-name 须承载方向标题');
   });
 
   test('N2 title 兜底：仅有 title 字段（无 name）时仍渲染标题（兼容数据模型差异）', () => {
@@ -219,10 +219,29 @@ describe('1b. matrixRowHtml：方向标题必须可见（name/title 兜底 + 布
       'matrixRowHtml 须以 g.name 为主、g.title 兜底渲染标题（兼容 name/title 两种数据模型）');
   });
 
-  test('N4 布局兜底：count 预留按钮槽位（margin-right:64px），编辑/删除按钮绝对定位脱离 flex 流，避免标题被压成 0 宽', () => {
-    assert.ok(/\.matrix-count\{[^}]*margin-right:64px/.test(HTML), 'matrix-count 须预留 64px 右侧槽位给操作按钮');
-    assert.ok(/\.matrix-row-head \.matrix-dir-edit,[\s\S]*\.matrix-row-head \.matrix-dir-del\{[^}]*position:absolute/.test(HTML),
-      '编辑/删除按钮须绝对定位（脱离 flex 流），不挤占标题宽度');
+  test('N4 布局兜底：方案 B 竖向堆叠——行头 flex-direction:column、操作行 .matrix-head-actions 为 flex 行、标题两行截断全显', () => {
+    assert.ok(/\.matrix-row-head\{[^}]*flex-direction:column/.test(HTML), 'matrix-row-head 须为竖向排列（flex-direction:column）');
+    assert.ok(/\.matrix-head-actions\{[^}]*display:flex/.test(HTML), 'matrix-head-actions 须存在且为 flex 行（承载 count + 编辑/删除按钮）');
+    assert.ok(/\.matrix-name\{[^}]*-webkit-line-clamp:2/.test(HTML), 'matrix-name 须使用两行截断（-webkit-line-clamp:2）以全显长标题');
+    // 方案 B 仅改方向不改宽：桌面仍为 flex:0 0 200px（回归保护）
+    assert.ok(/\.matrix-row-head\{[^}]*flex:0 0 200px/.test(HTML), 'matrix-row-head 桌面宽度须仍为 flex:0 0 200px');
+  });
+
+  test('M1 长名称可全显：name 超长时渲染后 .matrix-name-line 含该全称文本（不被截断丢弃）', () => {
+    const env = makeSandbox();
+    const long = '职业医学考研长目标名称非常长用于验证完整显示';
+    const html = env.api.get(`matrixRowHtml({id:"g9",name:"${long}",emoji:"🩺"}, [])`);
+    const line = (html.match(/<div class="matrix-name-line">[\s\S]*?<\/div>/) || [''])[0];
+    assert.ok(line.includes(long), '长名称全称须出现在 matrix-name-line 中');
+    assert.ok(html.includes(long), '长名称全称须整体出现在行头 HTML 中');
+  });
+
+  test('M2 title 兜底：matrix-name 的 title 属性等于全称（hover 原生提示，与可见文本一致）', () => {
+    const env = makeSandbox();
+    const long = '职业医学考研长目标名称非常长用于验证完整显示';
+    const html = env.api.get(`matrixRowHtml({id:"g9",name:"${long}",emoji:"🩺"}, [])`);
+    assert.ok(/<span class="matrix-name" title="[^"]*职业医学考研长目标名称非常长用于验证完整显示[^"]*"/.test(html),
+      'matrix-name 的 title 属性须等于全称（兜底原生提示）');
   });
 });
 
