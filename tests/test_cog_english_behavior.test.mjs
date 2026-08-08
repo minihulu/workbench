@@ -47,6 +47,8 @@ const REGION_DICT = sliceBetween(HTML, 'const _idb = {', 'const TranslateService
 const REGION_TRANSLATE = sliceBetween(HTML, 'const TranslateService = {', '/* ---- AI 调用', 'translate');
 // 设置区块：$ / $$ / _mem / _canStore / LS / settings / Settings（不含 applyTheme 等副作用）
 const REGION_SETTINGS = sliceBetween(HTML, 'const _mem = {}', 'const CATS = [', 'settings');
+// 浮层挂载点（全屏时挂阅读器，否则挂 body）—— 供 showTrPop/showDictPop 调用
+const REGION_FLOAT_HOST = sliceBetween(HTML, 'function pdfFloatHost(){', 'function removePdfSelBtn(){', 'floatHost');
 // 单行工具
 const ESC_SRC = extractLine(HTML, /function esc\(s\)\{[^\n]*\n/, 'esc');
 const APIHEADERS_SRC = extractLine(HTML, /function apiHeaders\(\)\{[^\n]*\n/, 'apiHeaders');
@@ -202,7 +204,7 @@ function buildSandbox() {
     };
   `;
   // window/document 在 vm 内已是全局，无需再注入；这里仅把 window 透出给测试读取/写入 ECDICT
-  const code = prelude + '\n' + ESC_SRC + '\n' + APIHEADERS_SRC + '\n' + REGION_DICT + '\n' + REGION_TRANSLATE + '\n' + REGION_SETTINGS + '\n' + epilogue
+  const code = prelude + '\n' + ESC_SRC + '\n' + APIHEADERS_SRC + '\n' + REGION_DICT + '\n' + REGION_TRANSLATE + '\n' + REGION_SETTINGS + '\n' + REGION_FLOAT_HOST + '\n' + epilogue
     .replace('windowObjRef', 'window');
   vm.runInContext(code, sandbox, { filename: 'cog-extracted.js' });
 

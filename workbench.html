@@ -1798,7 +1798,7 @@ const CATS = ["工作","学习","生活","娱乐","运动","其他"];
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 function fmtDate(d){ const x=new Date(d); return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0"); }
 function todayStr(){ return fmtDate(new Date()); }
-function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),1900); }
+function toast(msg){ const t=$("#toast"); if(!t) return; if(t.parentNode !== pdfFloatHost()) pdfFloatHost().appendChild(t); t.textContent=msg; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),1900); }
 function copyText(t){ navigator.clipboard?.writeText(t).then(()=>toast("已复制")).catch(()=>toast("复制失败")); }
 
 /* ============ 主题 ============ */
@@ -4312,7 +4312,7 @@ function delCogRead(){
   cogReads = cogReads.map(r=> r.id===cogReadId ? Object.assign({},r,{deleted:true, updatedAt:Date.now()}) : r);
   saveCog(); closeCogRead(); renderCogHome(); renderCogReads(); toast("已删除");
 }
-function closeCogRead(){ $("#cogReadModal").classList.remove("open"); cogReadId=null; }
+function closeCogRead(){ closeAnnoEditor(); $("#cogReadModal").classList.remove("open"); cogReadId=null; }
 /* ===== 书籍库 ===== */
 function renderCogBooks(){
   renderCogShelf($("#cogBookList"), 0, false);
@@ -5676,6 +5676,16 @@ function renderPdfAnnoList(){
    T03 交互层：选中工具栏 / 轻量编辑弹窗 / 气泡
    浮层一律 position:fixed + getBoundingClientRect（同为视口坐标系）+ 边界夹取。
    ============================================================================ */
+
+/** 浮层挂载点：全屏（原生 :fullscreen 或 .immersive 兜底）时挂到阅读器内，
+ *  否则挂 body。保证浮层在全屏下可见，普通模式下仍是视口定位。 */
+function pdfFloatHost(){
+  const r = document.querySelector('.pdf-reader');
+  const fs = document.fullscreenElement || document.webkitFullscreenElement || null;
+  if((fs && r && fs === r) || (r && r.classList.contains('immersive'))) return r;
+  return document.body;
+}
+
 function removePdfSelBtn(){ const ex = document.querySelector('.pdf-sel-row'); if(ex) ex.remove(); }
 /** 浮层夹取到视口内：优先显示在锚点上方，放不下则翻到下方 */
 function placeFloatAbove(el, rect){
@@ -5715,7 +5725,7 @@ function showSelToolbar(rect, draft){
     <button class="b-tr" data-a="tr">🌐 翻译</button>
     <button class="b-cp" data-a="cp">📋</button>
     <button class="b-x" data-a="x">✕</button>`;
-  document.body.appendChild(row);
+  pdfFloatHost().appendChild(row);
   placeFloatAbove(row, rect);
   // 选词/翻译的浮层锚点：用选中矩形构造稳定锚（工具栏随后被移除，不能直接用 row）
   const anchor = { getBoundingClientRect: ()=> rect };
@@ -5809,6 +5819,11 @@ function renderColorDots(box, active, onPick){
   $$(".cd", box).forEach(el=> el.onclick = ()=> onPick(el.dataset.color));
 }
 function openAnnoEditor(draft){
+  // 全屏（原生 :fullscreen 或 .immersive 兜底）时把编辑弹窗移进阅读器，确保全屏下可见；
+  // 幂等：已在目标节点则不重复移动，全局 $("#annoEditorModal") 引用始终有效。
+  const modalEl = $("#annoEditorModal");
+  const host = pdfFloatHost();
+  if(modalEl && modalEl.parentNode !== host) host.appendChild(modalEl);
   const d = Object.assign({}, draft || {});
   if(d.annoId){
     const a = getAnno(d.annoId);
@@ -5856,7 +5871,13 @@ function deleteAnnoEditor(){
   if(a) afterAnnoChange(a.bookId, a.page);
   toast("已删除");
 }
-function closeAnnoEditor(){ $("#annoEditorModal").classList.remove("open"); annoEditorDraft = null; }
+function closeAnnoEditor(){
+  const modalEl = $("#annoEditorModal");
+  // 关闭时把弹窗移回 body，避免它作为阅读器子节点在退出全屏/关书时被连带移除成孤儿。
+  if(modalEl && modalEl.parentNode !== document.body) document.body.appendChild(modalEl);
+  modalEl.classList.remove("open");
+  annoEditorDraft = null;
+}
 
 /* ---- 批注气泡（查看 / 编辑 / 换色 / 删除）---- */
 function closeAnnoPopover(){ const p = document.querySelector('.anno-pop'); if(p) p.remove(); }
@@ -5875,7 +5896,7 @@ function openAnnoPopover(annoId, anchorEl){
       <button class="btn sm ghost" data-a="del" style="color:#c0392b;">🗑</button>
       <button class="btn sm ghost" data-a="x">✕</button>
     </div>`;
-  document.body.appendChild(pop);
+  pdfFloatHost().appendChild(pop);
   const r = anchorEl && anchorEl.getBoundingClientRect ? anchorEl.getBoundingClientRect() : { left:window.innerWidth/2, top:window.innerHeight/2, width:0, height:0, bottom:window.innerHeight/2 };
   placeFloatAbove(pop, r);
   renderColorDots($("#apColors", pop), a.color, (c)=>{
@@ -6060,7 +6081,7 @@ function showVocab(word, anchor, words){
     <div class="v-row"><span class="v-k">意思</span>${esc(w.meaning||"")}</div>
     <div class="v-row"><span class="v-k">语境</span>${esc(w.context||"")}</div>
     <div class="v-row"><span class="v-k">搭配</span>${esc(w.collocations||"")}</div>`;
-  document.body.appendChild(pop);
+  pdfFloatHost().appendChild(pop);
   const r = anchor.getBoundingClientRect();
   pop.style.top = Math.min(window.innerHeight-170, r.bottom+8) + "px";
   pop.style.left = Math.max(8, Math.min(window.innerWidth-272, r.left)) + "px";
@@ -6215,7 +6236,7 @@ function showTrPop(anchor, res, src){
          + `<div class="tr-fallback">⚠️ ${esc(msg)}</div>`;
   }
   pop.innerHTML = `<span class="tr-close" onclick="closeTrPop()">×</span>` + body;
-  document.body.appendChild(pop);
+  pdfFloatHost().appendChild(pop);
   const r = (anchor && anchor.getBoundingClientRect) ? anchor.getBoundingClientRect() : { left: 80, bottom: 80, top: 80 };
   pop.style.top = Math.min(window.innerHeight - 180, r.bottom + 8) + "px";
   pop.style.left = Math.max(8, Math.min(window.innerWidth - 300, r.left)) + "px";
@@ -6238,7 +6259,7 @@ function showDictPop(anchor, entry, word){
          + `<div class="d-row"><span class="d-k">释义</span>${esc(entry.meaning || "")}</div>`;
   }
   pop.innerHTML = `<span class="d-close" onclick="closeDictPop()">×</span>` + body;
-  document.body.appendChild(pop);
+  pdfFloatHost().appendChild(pop);
   const r = (anchor && anchor.getBoundingClientRect) ? anchor.getBoundingClientRect() : { left: 80, bottom: 80, top: 80 };
   pop.style.top = Math.min(window.innerHeight - 180, r.bottom + 8) + "px";
   pop.style.left = Math.max(8, Math.min(window.innerWidth - 280, r.left)) + "px";
